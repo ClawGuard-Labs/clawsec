@@ -1,0 +1,122 @@
+// events.proto — gRPC service definition for ai-agent-monitor.
+//
+// This proto defines the upgrade path from the current SSE streaming endpoint
+// to a full gRPC streaming API for production use.
+//
+// To generate Go code:
+//   # Install protoc and plugins
+//   sudo apt-get install -y protobuf-compiler
+//   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+//   go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+//
+//   # Generate
+//   protoc \
+//     --go_out=. --go_opt=paths=source_relative \
+//     --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+//     proto/events.proto
+//
+//   # This creates:
+//   #   proto/events.pb.go       (message types)
+//   #   proto/events_grpc.pb.go  (service stubs)
+//
+// Then in internal/output/grpc_server.go, implement MonitorServiceServer.
+
+syntax = "proto3";
+
+package monitor.v1;
+
+option go_package = "github.com/ai-agent-monitor/proto/monitorv1";
+
+// ── Service definition ────────────────────────────────────────────────────
+
+service MonitorService {
+  // StreamEvents opens a server-sent stream of real-time events.
+  // The stream stays open until the client cancels or the server shuts down.
+  rpc StreamEvents(StreamRequest) returns (stream MonitorEvent) {}
+
+  // GetSessionSummary returns the current state of a named AI session.
+  rpc GetSessionSummary(SessionRequest) returns (SessionSummary) {}
+
+  // ListSessions returns all currently active sessions.
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {}
+}
+
+// ── Request messages ──────────────────────────────────────────────────────
+
+message StreamRequest {
+  // Only emit events with risk_score >= this threshold (0 = all).
+  int32 min_risk_score = 1;
+  // Only emit events that carry ALL of these tags (empty = no filter).
+  repeated string require_tags = 2;
+  // Only emit events of these types (empty = all types).
+  repeated string event_types = 3;
+}
+
+message SessionRequest {
+  string session_id = 1;
+}
+
+message ListSessionsRequest {
+  // Return at most this many sessions (0 = all).
+  int32 limit = 1;
+}
+
+// ── Response messages ─────────────────────────────────────────────────────
+
+// MonitorEvent is streamed for every qualifying event.
+// Field names mirror consumer.EnrichedEvent for JSON/gRPC parity.
+message MonitorEvent {
+  string    timestamp     = 1;   // RFC3339Nano wall time
+  string    event_type    = 2;   // exec|file_open|file_rw|file_mmap|file_unlink|net_connect|net_send
+  uint32    pid           = 3;
+  uint32    ppid          = 4;
+  uint32    uid           = 5;
+  uint64    cgroup_id     = 6;
+  string    comm          = 7;   // process name (max 15 chars)
+
+  // Exec fields
+  string    binary        = 8;
+  repeated string args    = 9;
+  string    cmdline       = 10;
+
+  // File fields
+  string    file_path     = 11;
+  uint32    file_flags    = 12;
+  uint64    byte_count    = 13;
+
+  // Network fields
+  NetworkInfo network     = 14;
+
+  // Enrichment
+  string    ai_session_id  = 15;
+  string    model_detected = 16;
+  bool      is_ai_process  = 17;
+  int32     risk_score     = 18;
+  repeated string tags     = 19;
+  uint32    risk_flags     = 20;
+}
+
+message NetworkInfo {
+  string dst_ip      = 1;
+  uint32 dst_port    = 2;
+  string protocol    = 3;
+  string http_method = 4;
+  string url_prefix  = 5;
+}
+
+message SessionSummary {
+  string          session_id      = 1;
+  uint32          root_pid        = 2;
+  uint64          cgroup_id       = 3;
+  int32           risk_score      = 4;
+  repeated string tags            = 5;
+  int64           duration_secs   = 6;  // seconds since session start
+  int32           event_count     = 7;
+  int32           pid_count       = 8;
+  string          last_seen       = 9;  // RFC3339Nano
+}
+
+message ListSessionsResponse {
+  repeated SessionSummary sessions = 1;
+  int32 total = 2;
+}

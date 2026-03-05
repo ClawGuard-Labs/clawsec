@@ -1,0 +1,20 @@
+id: http_post
+info:
+  name: HTTP POST Request
+  author: sl4y3r
+  severity: low
+  description: >
+    A process sent an HTTP POST request. AI agents sending data to external
+    endpoints (LLM APIs, webhooks, exfiltration targets) will trigger this.
+  tags: [ai, network, http, post, data-egress]
+  risk-score: 15
+
+matchers:
+  - type: event-type
+    values: [net_send]
+
+  - type: network
+    field: http_method
+    values: [POST]
+
+matchers-condition: and

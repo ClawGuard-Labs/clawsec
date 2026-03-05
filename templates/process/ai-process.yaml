@@ -1,0 +1,18 @@
+id: ai_process
+info:
+  name: AI Process Execution
+  author: sl4y3r
+  severity: info
+  description: A known AI runtime (python, ollama, vllm, etc.) was executed.
+  tags: [ai, process, exec]
+  risk-score: 10
+
+matchers:
+  - type: event-type
+    values: [exec]
+
+  - type: process
+    field: is_ai_process
+    equals: true
+
+matchers-condition: and

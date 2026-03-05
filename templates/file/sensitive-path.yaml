@@ -1,0 +1,26 @@
+id: sensitive_read
+info:
+  name: Sensitive Path Access
+  author: sl4y3r
+  severity: medium
+  description: >
+    A process accessed a sensitive path (/etc, /proc, /sys, /.ssh/) as flagged
+    by the eBPF kernel program at capture time.
+  tags: [ai, filesystem, sensitive, recon]
+  risk-score: 30
+
+matchers:
+  - type: event-type
+    values: [file_open, file_rw]
+
+  - type: risk-flag
+    flags: [sensitive]
+
+  # Only fire when the session is confirmed to contain an AI process.
+  # This prevents false positives from system daemons (systemd-oomd,
+  # IDE helpers, etc.) that also read /proc or /sys paths.
+  - type: session
+    field: has_ai_process
+    equals: true
+
+matchers-condition: and

@@ -1,0 +1,22 @@
+id: long_running_llm
+info:
+  name: Long-Running AI Process
+  author: sl4y3r
+  severity: info
+  description: >
+    An AI process has been active for more than 5 minutes within the same
+    session. Useful for tracking persistent inference servers or agentic
+    loops that may be running unattended.
+  tags: [ai, process, long-running, persistence]
+  risk-score: 10
+
+matchers:
+  - type: process
+    field: is_ai_process
+    equals: true
+
+  - type: session
+    field: duration_minutes
+    gt: 5
+
+matchers-condition: and

@@ -1,0 +1,29 @@
+id: weaviate-unauth-schema
+
+info:
+  name: Weaviate Vector DB Schema Exposed
+  author: sl4y3r
+  severity: high
+  description: |
+    Weaviate vector database schema endpoint is publicly accessible without
+    authentication. An attacker can enumerate all defined classes, properties,
+    and vectorizer configurations, which reveals the data model.
+  reference:
+    - https://weaviate.io/developers/weaviate/configuration/authentication
+  tags: ai,weaviate,unauth,vector-db,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/v1/schema"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"classes"'
+        part: body

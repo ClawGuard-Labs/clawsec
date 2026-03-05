@@ -1,0 +1,31 @@
+id: vllm-api-exposed
+
+info:
+  name: vLLM OpenAI-Compatible API Exposed
+  author: sl4y3r
+  severity: medium
+  description: |
+    vLLM inference server's OpenAI-compatible REST API is accessible without
+    authentication. An attacker can list available models and submit arbitrary
+    inference requests, potentially incurring GPU costs or leaking model info.
+  reference:
+    - https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html
+  tags: ai,vllm,llm,unauth,exposure,openai
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/v1/models"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"object"'
+          - '"model"'
+        part: body
+        condition: and

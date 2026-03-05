@@ -1,0 +1,34 @@
+id: model_load
+info:
+  name: AI Model File Access
+  author: sl4y3r
+  severity: info
+  description: >
+    A process opened or read a file with a known AI model extension
+    (.pt, .gguf, .safetensors, .onnx, .pkl, etc.).
+  tags: [ai, model, filesystem]
+  risk-score: 20
+
+matchers:
+  - type: event-type
+    values: [file_open, file_rw]
+
+  - type: filepath
+    extensions:
+      - .pt
+      - .pth
+      - .bin
+      - .gguf
+      - .safetensors
+      - .onnx
+      - .pkl
+      - .npz
+      - .npy
+      - .h5
+      - .pb
+      - .ckpt
+      - .weights
+      - .model
+      - .tflite
+
+matchers-condition: and

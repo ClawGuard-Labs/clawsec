@@ -1,0 +1,25 @@
+id: download_exec
+info:
+  name: Download then Execute Pattern
+  author: sl4y3r
+  severity: high
+  description: >
+    An exec event occurred within 30 seconds of a network connection in the
+    same session. This "download and execute" pattern is a classic indicator
+    of malicious payload delivery.
+  tags: [ai, network, exec, download-exec, high-risk]
+  risk-score: 50
+
+matchers:
+  - type: event-type
+    values: [exec]
+
+  - type: session
+    field: exec_after_net
+    equals: true
+
+  - type: session
+    field: last_net_age_seconds
+    lt: 30
+
+matchers-condition: and

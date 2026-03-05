@@ -1,0 +1,24 @@
+id: ssh_key_access
+info:
+  name: SSH Key Access
+  author: sl4y3r
+  severity: high
+  description: >
+    A process read or opened an SSH private key or authorized_keys file.
+    This is a strong indicator of credential harvesting by an AI agent.
+  tags: [ai, credentials, filesystem, ssh]
+  risk-score: 50
+
+matchers:
+  - type: event-type
+    values: [file_open, file_rw]
+
+  - type: filepath
+    words:
+      - /.ssh/
+      - /id_rsa
+      - /id_ed25519
+      - /authorized_keys
+    condition: or
+
+matchers-condition: and

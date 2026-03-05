@@ -1,0 +1,19 @@
+id: model_mmap
+info:
+  name: Large Memory-Mapped File (Model Load via mmap)
+  author: sl4y3r
+  severity: info
+  description: >
+    A file larger than 100 MB was memory-mapped. This is the typical pattern
+    used by PyTorch, llama.cpp, and other frameworks to load model weights.
+  tags: [ai, model, mmap, filesystem]
+  risk-score: 20
+
+matchers:
+  - type: event-type
+    values: [file_mmap]
+
+  - type: risk-flag
+    flags: [large_mmap]
+
+matchers-condition: and

@@ -1,0 +1,14 @@
+id: file_deleted
+info:
+  name: File Deletion
+  author: sl4y3r
+  severity: low
+  description: >
+    A process unlinked (deleted) a file. AI agents that clean up after
+    themselves or attempt to erase evidence will trigger this.
+  tags: [ai, filesystem, delete]
+  risk-score: 15
+
+matchers:
+  - type: event-type
+    values: [file_unlink]

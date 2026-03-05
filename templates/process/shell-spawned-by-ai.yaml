@@ -1,0 +1,24 @@
+id: ai_spawned_shell
+info:
+  name: Shell Spawned by AI Process
+  author: sl4y3r
+  severity: low
+  description: >
+    A shell (bash, sh, zsh, dash) was spawned within a session that contains
+    a known AI process. This may indicate command injection or tool use.
+  tags: [ai, process, shell, lateral-movement]
+  risk-score: 15
+
+matchers:
+  - type: event-type
+    values: [exec]
+
+  - type: process
+    field: comm
+    values: [bash, sh, zsh, dash]
+
+  - type: session
+    field: has_ai_process
+    equals: true
+
+matchers-condition: and

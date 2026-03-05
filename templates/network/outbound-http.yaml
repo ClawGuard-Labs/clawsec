@@ -1,0 +1,20 @@
+id: outbound_http
+info:
+  name: Outbound HTTP/HTTPS Connection
+  author: sl4y3r
+  severity: info
+  description: >
+    A process opened an outbound connection to port 80 (HTTP) or 443 (HTTPS).
+    Expected for AI agents calling external APIs, but tracked for audit purposes.
+  tags: [ai, network, http, egress]
+  risk-score: 10
+
+matchers:
+  - type: event-type
+    values: [net_connect]
+
+  - type: network
+    field: dst_port
+    values: ["80", "443"]
+
+matchers-condition: and

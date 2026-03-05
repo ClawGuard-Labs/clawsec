@@ -1,0 +1,22 @@
+id: unusual_port
+info:
+  name: Outbound Connection to Unusual Port
+  author: sl4y3r
+  severity: low
+  description: >
+    A process connected to a port that is not in the common set (80, 443, 53, 22).
+    May indicate C2 traffic, non-standard APIs, or data exfiltration channels.
+  tags: [ai, network, unusual-port, egress]
+  risk-score: 20
+
+matchers:
+  - type: event-type
+    values: [net_connect]
+
+  # Negate: match fires when dst_port is NOT in this common-port list.
+  - type: network
+    field: dst_port
+    values: ["0", "22", "53", "80", "443"]
+    negate: true
+
+matchers-condition: and

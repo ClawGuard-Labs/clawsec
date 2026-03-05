@@ -1,0 +1,29 @@
+id: gradio-app-exposed
+
+info:
+  name: Gradio ML Application Publicly Exposed
+  author: sl4y3r
+  severity: medium
+  description: |
+    A Gradio machine learning demo application is publicly accessible.
+    Gradio apps often expose model inference endpoints, file upload functionality,
+    and may contain sensitive API keys or model weights paths.
+  reference:
+    - https://www.gradio.app/guides/sharing-your-app
+  tags: ai,gradio,ml,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/info"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"version"'
+        part: body

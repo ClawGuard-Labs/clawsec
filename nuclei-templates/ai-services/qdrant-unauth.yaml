@@ -1,0 +1,31 @@
+id: qdrant-unauth-access
+
+info:
+  name: Qdrant Vector DB Unauthenticated Access
+  author: sl4y3r
+  severity: high
+  description: |
+    Qdrant vector database collections endpoint is accessible without
+    authentication. An unauthenticated attacker can list, query, modify,
+    or delete all vector collections and their embeddings.
+  reference:
+    - https://qdrant.tech/documentation/guides/security/
+  tags: ai,qdrant,unauth,vector-db,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/collections"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"result"'
+          - '"collections"'
+        part: body
+        condition: and

@@ -1,0 +1,21 @@
+id: self_modify
+info:
+  name: Process Self-Modification
+  author: sl4y3r
+  severity: high
+  description: >
+    A process wrote to a binary that was previously executed within the same
+    session. This pattern is characteristic of self-modifying code or
+    an AI agent replacing its own executable.
+  tags: [ai, persistence, tamper, high-risk]
+  risk-score: 80
+
+matchers:
+  - type: event-type
+    values: [file_rw]
+
+  - type: session
+    field: exec_binary_match_filepath
+    equals: true
+
+matchers-condition: and

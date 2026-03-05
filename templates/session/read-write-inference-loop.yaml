@@ -1,0 +1,28 @@
+id: read_write_loop
+info:
+  name: Read-Write Inference Loop
+  author: sl4y3r
+  severity: low
+  description: >
+    A session contains file_rw events on at least two different file paths.
+    This matches the pattern of an AI inference pipeline reading an input
+    file and writing to an output file — useful for auditing data flows.
+  tags: [ai, filesystem, inference, data-flow]
+  risk-score: 15
+
+matchers:
+  - type: event-type
+    values: [file_rw]
+
+  # Session must have another file_rw with a different path than the current event.
+  - type: session
+    field: other_file_rw
+    equals: true
+
+  # Only fire within a confirmed AI session to avoid noise from general-purpose
+  # daemons (VS Code, gateways, oom-killer) that also read/write multiple files.
+  - type: session
+    field: has_ai_process
+    equals: true
+
+matchers-condition: and

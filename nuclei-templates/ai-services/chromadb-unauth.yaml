@@ -1,0 +1,29 @@
+id: chromadb-unauth-access
+
+info:
+  name: ChromaDB Unauthenticated API Access
+  author: sl4y3r
+  severity: high
+  description: |
+    ChromaDB vector store REST API is accessible without authentication.
+    An attacker can list all collections, query embeddings, and extract
+    stored documents and their metadata.
+  reference:
+    - https://docs.trychroma.com/reference/py-client
+  tags: ai,chromadb,unauth,vector-db,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/v1/collections"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"name"'
+        part: body

@@ -1,0 +1,31 @@
+id: localai-api-exposed
+
+info:
+  name: LocalAI OpenAI-Compatible API Exposed
+  author: sl4y3r
+  severity: medium
+  description: |
+    LocalAI server's OpenAI-compatible API is accessible without authentication.
+    An attacker can enumerate available local models and submit inference requests
+    without any access controls.
+  reference:
+    - https://localai.io/basics/getting_started/
+  tags: ai,localai,llm,unauth,exposure,openai
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/v1/models"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '"data"'
+          - '"object"'
+        part: body
+        condition: and

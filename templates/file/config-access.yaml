@@ -1,0 +1,25 @@
+id: config_access
+info:
+  name: Configuration File Access
+  author: sl4y3r
+  severity: info
+  description: >
+    A process opened a configuration file (.json, .yaml, .yml, .toml, .env, .ini).
+    Common in AI pipelines but worth tracking for secrets exposure.
+  tags: [ai, filesystem, config]
+  risk-score: 10
+
+matchers:
+  - type: event-type
+    values: [file_open, file_rw]
+
+  - type: filepath
+    extensions:
+      - .json
+      - .yaml
+      - .yml
+      - .toml
+      - .env
+      - .ini
+
+matchers-condition: and

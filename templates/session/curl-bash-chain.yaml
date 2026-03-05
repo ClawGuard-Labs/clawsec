@@ -1,0 +1,27 @@
+id: curl_bash_chain
+info:
+  name: curl/wget Piped to Shell
+  author: sl4y3r
+  severity: high
+  description: >
+    A shell was spawned in a session that also ran curl or wget. This matches
+    the classic "curl | bash" remote code execution pattern often used in
+    supply-chain or prompt-injection attacks.
+  tags: [ai, network, exec, curl-bash, rce, high-risk]
+  risk-score: 40
+
+matchers:
+  - type: event-type
+    values: [exec]
+
+  - type: process
+    field: comm
+    values: [bash, sh, zsh]
+
+  # Session must have previously executed curl or wget.
+  - type: session
+    field: has_exec_comm
+    values: [curl, wget]
+    condition: or
+
+matchers-condition: and
