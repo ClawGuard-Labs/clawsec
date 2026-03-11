@@ -1,0 +1,22 @@
+rule_id: AI-BA-002
+name: Garak attack success rate exceeds 15% threshold
+description: >
+  Model fails baseline behavioral testing: Attack Success Rate (ASR) from
+  NVIDIA Garak (or equivalent red-teaming) exceeds 15% on enterprise probe set.
+  Indicates elevated risk of jailbreaks, prompt injection, or harmful outputs.
+severity: MEDIUM
+action: WARN
+category: behavior-alignment
+subcategory: red-teaming
+frameworks:
+  owasp_llm: [LLM04:2025, LLM09]
+  mitre_atlas: [AML.T0018]
+  nist_ai_rmf: [MEASURE 2]
+  eu_ai_act: [Art. 9]
+remediation: >
+  Re-run Garak with full probe set. Consider additional hardening (e.g. guardrails,
+  output filters) or alternative model. Document ASR and mitigation for approval.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [garak, jailbreak, red-team, asr]

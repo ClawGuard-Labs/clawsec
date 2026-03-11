@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pre-Installation AI Security Rule",
+  "description": "Schema for a single pre-installation security rule (BLOCK/WARN/AUDIT)",
+  "type": "object",
+  "required": ["rule_id", "name", "description", "severity", "action", "category"],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "pattern": "^AI-[A-Z]{2}-[0-9]{3}$",
+      "description": "Unique rule identifier (e.g. AI-DP-001)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short human-readable rule name"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Detailed description of what the rule checks and why it matters"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+      "description": "Severity level"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["BLOCK", "WARN", "AUDIT"],
+      "description": "Verdict when rule fires: BLOCK prevents installation, WARN requires acknowledgment, AUDIT logs only"
+    },
+    "category": {
+      "type": "string",
+      "description": "Rule category (e.g. data-provenance, supply-chain)"
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "Optional subcategory"
+    },
+    "frameworks": {
+      "type": "object",
+      "description": "Mapping of framework name to list of references (e.g. owasp_llm, mitre_atlas)",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "cwe": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "CWE identifiers where applicable"
+    },
+    "cve": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "CVE identifiers where applicable"
+    },
+    "remediation": {
+      "type": "string",
+      "description": "What to do when the rule fires"
+    },
+    "applicable_platforms": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["huggingface", "ollama", "lm-studio"] },
+      "description": "Platforms this rule applies to"
+    },
+    "file_formats": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Relevant file extensions (e.g. .pkl, .pt)"
+    },
+    "check_type": {
+      "type": "string",
+      "enum": ["automated", "semi-automated", "human-review"],
+      "description": "How the check is performed"
+    },
+    "requires_human_review": {
+      "type": "boolean",
+      "description": "Whether human review is required for findings"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tags for filtering and search"
+    }
+  },
+  "additionalProperties": false
+}

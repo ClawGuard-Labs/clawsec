@@ -1,0 +1,20 @@
+rule_id: AI-BA-004
+name: TruthfulQA score below peer median for model class
+description: >
+  Model scores below peer median on TruthfulQA (or equivalent) for its
+  size/class. Indicates higher tendency to generate misinformation or
+  confabulation, which may be unacceptable for enterprise use cases.
+severity: LOW
+action: AUDIT
+category: behavior-alignment
+subcategory: truthfulness
+frameworks:
+  nist_ai_rmf: [MEASURE 2]
+remediation: >
+  Log for compliance. Compare against published TruthfulQA results for same
+  model family. Consider use-case-specific accuracy requirements and
+  additional guardrails if deploying for factual domains.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [truthfulqa, misinformation, benchmark]

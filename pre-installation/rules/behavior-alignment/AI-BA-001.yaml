@@ -1,0 +1,23 @@
+rule_id: AI-BA-001
+name: Fine-tuned with no safety evaluation documentation
+description: >
+  Model is a fine-tuned derivative but has no documented safety evaluation
+  (e.g. HarmBench, JailbreakBench, red-teaming). Fine-tuning can degrade
+  alignment; even benign fine-tuning on innocuous datasets has been shown
+  to reduce refusal rates and introduce emergent misalignment.
+severity: MEDIUM
+action: WARN
+category: behavior-alignment
+subcategory: safety-evaluation
+frameworks:
+  owasp_llm: [LLM04:2025, LLM09]
+  mitre_atlas: [AML.T0018]
+  eu_ai_act: [Art. 9]
+remediation: >
+  Run Garak or HarmBench/JailbreakBench before deployment. Prefer models with
+  published safety eval results. Document safety assessment and any residual
+  risk acceptance for enterprise use.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: semi-automated
+requires_human_review: false
+tags: [fine-tuning, safety, alignment, evaluation]

@@ -1,0 +1,19 @@
+rule_id: AI-BA-003
+name: Behavioral benchmarks not run within last 90 days
+description: >
+  No record of HarmBench, JailbreakBench, or equivalent safety benchmarks
+  run for this model within the last 90 days. Behavioral risk can change
+  with model updates and environment; periodic re-evaluation is recommended.
+severity: LOW
+action: AUDIT
+category: behavior-alignment
+subcategory: benchmark-freshness
+frameworks:
+  nist_ai_rmf: [MEASURE 2]
+remediation: >
+  Schedule quarterly behavioral benchmark runs. Cache results by model hash;
+  re-run when model or rule set changes. Log for compliance and trend analysis.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [benchmarks, harmbench, jailbreakbench, freshness]
