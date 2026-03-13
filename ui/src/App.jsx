@@ -100,7 +100,7 @@ export default function App() {
                 <span className="topbar-sep">·</span>
                 {selectedSession}
               </>
-            : 'AI Agent Monitor — Session Overview'
+            : 'ClawSec — Session Overview'
           }
         </span>
         <span className="status-pill">

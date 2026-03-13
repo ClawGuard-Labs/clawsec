@@ -1,4 +1,4 @@
-# AI Agent Monitor
+# ClawSec
 
 **Kernel-level behavioral monitoring and active vulnerability scanning for AI/ML workloads on Linux.**
 
@@ -70,7 +70,7 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 ```bash
 # Clone and build
 git clone <repo>
-cd ai_agent_monitor
+cd clawsec
 make build
 
 # Run (requires root)
@@ -466,7 +466,7 @@ curl http://localhost:8080/healthz
 ## Project Structure
 
 ```
-ai_agent_monitor/
+clawsec/
 ├── bpf/
 │   ├── monitor.bpf.c          # eBPF kernel programs (syscall tracepoints)
 │   ├── common.h               # Shared kernel/userspace structs and constants
@@ -505,6 +505,23 @@ ai_agent_monitor/
 ├── go.sum
 └── Makefile
 ```
+
+### Preview
+
+<p align="center">
+  <img src="./assets/logs.png" width="1000"><br>
+  <em>Realtime logs (ClawSec running as a systemd service)</em>
+</p>
+
+<p align="center">
+  <img src="./assets/dashboard.png" width="1000"><br>
+  <em>ClawSec Dashboard</em>
+</p>
+
+<p align="center">
+  <img src="./assets/process_graph.png" width="1000"><br>
+  <em>Real-time process graph visualisation</em>
+</p>
 
 ---
 
