@@ -1,0 +1,35 @@
+[Unit]
+Description=ClawSec — eBPF-based host monitoring for AI agent processes
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+ExecStart=/usr/local/bin/clawsec \
+    --ui :9090 \
+    --bpf-obj   /usr/lib/clawsec/monitor.bpf.o \
+    --templates /etc/clawsec/templates \
+    --nuclei-templates /etc/clawsec/nuclei-templates \
+    --log-level info \
+    --output    /var/log/clawsec/events.json
+
+
+# View live: journalctl -u clawsec -f
+# View file: tail -f /var/log/clawsec/monitor.log
+StandardOutput=journal
+StandardError=append:/var/log/clawsec/monitor.log
+
+Restart=on-failure
+RestartSec=3
+
+# Graceful stop: systemd (PID 1) sends SIGTERM — our LSM hook allows PID 1.
+KillSignal=SIGTERM
+KillMode=control-group
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,6 @@ bpf/vmlinux.h
 *_rules.json
 *.log
 
-monitor
 .DS_Store
 .idea/
 .vscode/

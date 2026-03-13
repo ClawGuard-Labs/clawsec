@@ -5,7 +5,7 @@
 #   2. bpf         : compile monitor.bpf.c → monitor.bpf.o (eBPF bytecode)
 #   3. ui          : build React dashboard (Vite) → internal/graphapi/static/
 #   4. build       : compile Go daemon binary (embeds the built UI)
-#   5. install     : copy binary to /usr/local/bin
+#   5. install     : install binary, BPF object, templates + systemd unit
 #
 # Targets:
 #   make deps          — check all build/runtime dependencies
@@ -17,6 +17,10 @@
 #   make clean         — remove all generated files
 #   make run           — build and run as root (requires root)
 #   make fmt           — format Go and C source files
+#   make install       — install as systemd service (then: sudo make enable)
+#   make uninstall     — stop, disable and remove all installed files
+#   make enable        — systemctl enable --now clawsec
+#   make disable       — systemctl disable --now clawsec
 
 # ── Tool configuration ────────────────────────────────────────────────────────
 CLANG           ?= clang
@@ -146,12 +150,69 @@ run: build
 	@echo "==> Starting monitor (requires root)..."
 	sudo $(BINARY)
 
-# ── Install ──────────────────────────────────────────────────────────────────
+# ── Install paths ─────────────────────────────────────────────────────────────
+SVC_NAME     := clawsec
+SVC_BINARY   := /usr/local/bin/$(SVC_NAME)
+SVC_LIB      := /usr/lib/$(SVC_NAME)
+SVC_ETC      := /etc/$(SVC_NAME)
+SVC_LOG      := /var/log/$(SVC_NAME)
+SVC_UNIT     := /etc/systemd/system/$(SVC_NAME).service
+SVC_ROTATE   := /etc/logrotate.d/$(SVC_NAME)
+
+# ── Install ───────────────────────────────────────────────────────────────────
+# Installs binary, BPF object, templates, systemd unit, and logrotate config.
+# After install: sudo systemctl enable --now clawsec
 .PHONY: install
 install: build
-	@echo "==> Installing to /usr/local/bin/ai-agent-monitor..."
-	sudo install -m 0755 $(BINARY) /usr/local/bin/ai-agent-monitor
-	@echo "==> Installed."
+	@echo "==> Creating directories..."
+	sudo install -d -m 0755 $(SVC_LIB)
+	sudo install -d -m 0755 $(SVC_ETC)/templates
+	sudo install -d -m 0755 $(SVC_ETC)/nuclei-templates
+	sudo install -d -m 0750 $(SVC_LOG)
+	@echo "==> Installing binary and BPF object..."
+	sudo install -m 0755 $(BINARY)   $(SVC_BINARY)
+	sudo install -m 0644 bin/monitor.bpf.o $(SVC_LIB)/monitor.bpf.o
+	@echo "==> Installing templates..."
+	sudo cp -r templates/*        $(SVC_ETC)/templates/
+	sudo cp -r nuclei-templates/* $(SVC_ETC)/nuclei-templates/
+	@echo "==> Installing systemd unit..."
+	sudo install -m 0644 scripts/$(SVC_NAME).service $(SVC_UNIT)
+	@echo "==> Installing logrotate config..."
+	sudo install -m 0644 scripts/logrotate.d/$(SVC_NAME) $(SVC_ROTATE)
+	sudo systemctl daemon-reload
+	@echo ""
+	@echo "==> Install complete."
+	@echo "    Enable and start : sudo make enable"
+	@echo "    Follow logs      : journalctl -u $(SVC_NAME) -f"
+	@echo "    Log file         : tail -f $(SVC_LOG)/monitor.log"
+
+# ── Uninstall ─────────────────────────────────────────────────────────────────
+# Stops, disables, and removes the service and all installed files.
+# Logs at $(SVC_LOG) are preserved — remove manually if desired.
+.PHONY: uninstall
+uninstall:
+	@echo "==> Stopping and disabling service..."
+	-sudo systemctl stop    $(SVC_NAME) 2>/dev/null
+	-sudo systemctl disable $(SVC_NAME) 2>/dev/null
+	sudo rm -f $(SVC_UNIT)
+	sudo systemctl daemon-reload
+	@echo "==> Removing installed files..."
+	sudo rm -f  $(SVC_BINARY)
+	sudo rm -rf $(SVC_LIB)
+	sudo rm -rf $(SVC_ETC)
+	sudo rm -f  $(SVC_ROTATE)
+	@echo ""
+	@echo "==> Uninstall complete. Logs preserved at $(SVC_LOG)"
+	@echo "    To also remove logs: sudo rm -rf $(SVC_LOG)"
+
+# ── Enable / disable ──────────────────────────────────────────────────────────
+.PHONY: enable
+enable:
+	sudo systemctl enable --now $(SVC_NAME)
+
+.PHONY: disable
+disable:
+	sudo systemctl disable --now $(SVC_NAME)
 
 # ── Format ───────────────────────────────────────────────────────────────────
 .PHONY: fmt
@@ -192,7 +253,10 @@ help:
 	@echo "  build-no-ui   Full build skipping React rebuild (faster iteration)"
 	@echo "  verify        Dry-run verify eBPF program with bpftool"
 	@echo "  run           Build and run as root"
-	@echo "  install       Install binary + BPF object to /usr/local/bin"
+	@echo "  install       Install binary, BPF, templates, systemd unit + logrotate"
+	@echo "  uninstall     Stop, disable, and remove all installed files"
+	@echo "  enable        systemctl enable --now clawsec"
+	@echo "  disable       systemctl disable --now clawsec"
 	@echo "  fmt           Format Go and C source files"
 	@echo "  clean         Remove build artifacts"
 	@echo "  distclean     Remove all generated files including vmlinux.h"

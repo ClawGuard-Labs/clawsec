@@ -170,6 +170,7 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 	for _, rule := range ev.MatchedRules {
 		a := b.newAlert(
 			rule.Severity,
+			ev.RiskScore,
 			fmt.Sprintf("[%s] %s", rule.ID, rule.Name),
 			fmt.Sprintf("Process %s (pid %d) triggered rule %q", ev.Comm, ev.Pid, rule.ID),
 			[]string{procID},
@@ -184,6 +185,7 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 	if ev.NucleiResult != nil {
 		a := b.newAlert(
 			ev.NucleiResult.Severity,
+			severityToScore(ev.NucleiResult.Severity),
 			fmt.Sprintf("[nuclei] %s", ev.NucleiResult.Name),
 			ev.NucleiResult.Description,
 			[]string{procID},
@@ -205,16 +207,34 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-func (b *Builder) newAlert(severity, title, detail string, nodeIDs []string, sessionID string, at time.Time) *Alert {
+func (b *Builder) newAlert(severity string, riskScore int, title, detail string, nodeIDs []string, sessionID string, at time.Time) *Alert {
 	id := fmt.Sprintf("alert:%d", atomic.AddUint64(&b.alertID, 1))
 	return &Alert{
 		ID:        id,
 		Severity:  severity,
+		RiskScore: riskScore,
 		Title:     title,
 		Detail:    detail,
 		NodeIDs:   nodeIDs,
 		SessionID: sessionID,
 		At:        at,
+	}
+}
+
+// severityToScore maps a severity string to a numeric risk score for Nuclei
+// findings that don't carry a numeric score from the detection engine.
+func severityToScore(sev string) int {
+	switch sev {
+	case "critical":
+		return 90
+	case "high":
+		return 70
+	case "medium":
+		return 50
+	case "low":
+		return 30
+	default:
+		return 10
 	}
 }
 

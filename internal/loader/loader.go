@@ -27,7 +27,9 @@ package loader
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
@@ -43,6 +45,27 @@ type Objects struct {
 
 	// Exported map handles for direct consumer use
 	EventsMap *ebpf.Map
+
+	// LSM self-protection map handles.
+	// Nil when the BPF object was built without Section 6 programs,
+	// or when the maps could not be located after loading.
+	protectedInodesMap *ebpf.Map
+	monitorPIDMap      *ebpf.Map
+	protectedMapIDsMap *ebpf.Map
+}
+
+// inodeKey mirrors struct inode_key in bpf/common.h.
+// Field layout must match exactly — cilium/ebpf serialises it as-is.
+//
+//	Ino  uint64  — 8 bytes
+//	Dev  uint32  — 4 bytes
+//	Pad  uint32  — 4 bytes (explicit padding; matches C's __u32 _pad)
+//
+// Total: 16 bytes.
+type inodeKey struct {
+	Ino uint64
+	Dev uint32
+	Pad uint32
 }
 
 // tracepointDef maps a (group, event) pair to the C function name
@@ -51,6 +74,23 @@ type tracepointDef struct {
 	group   string
 	event   string
 	progKey string // C function name → key in coll.Programs
+}
+
+// lsmDef maps a C function name to a human-readable description used in
+// log messages.  LSM programs are attached via link.AttachTracing, not
+// link.Tracepoint, so they have a separate definition list.
+type lsmDef struct {
+	progKey string // C function name → key in coll.Programs
+	desc    string // human-readable hook name for logging
+}
+
+// allLSMProgs lists every LSM hook program defined in Section 6 of
+// monitor.bpf.c.  Attachment is conditional on BPF LSM being available
+// (isBPFLSMEnabled); missing entries are warned but not fatal.
+var allLSMProgs = []lsmDef{
+	{"lsm_protect_inode", "lsm/inode_permission"},
+	{"lsm_protect_kill", "lsm/task_kill"},
+	{"lsm_protect_bpf_map", "lsm/bpf_map"},
 }
 
 // allTracepoints lists every tracepoint we attach.
@@ -133,6 +173,12 @@ func Load(bpfObjPath string) (*Objects, error) {
 		return nil, fmt.Errorf("map %q not found in BPF object", "events")
 	}
 	objs.EventsMap = eventsMap
+
+	// Expose LSM self-protection maps (present only when Section 6 is compiled
+	// in).  Missing maps are not fatal — protection is simply disabled.
+	objs.protectedInodesMap = coll.Maps["protected_inodes"]
+	objs.monitorPIDMap = coll.Maps["monitor_pid"]
+	objs.protectedMapIDsMap = coll.Maps["protected_map_ids"]
 
 	return objs, nil
 }
@@ -296,4 +342,198 @@ func (o *Objects) MapFD(name string) (int, error) {
 		return -1, fmt.Errorf("map %q not found", name)
 	}
 	return m.FD(), nil
+}
+
+// ── LSM self-protection ───────────────────────────────────────────────────────
+
+// isBPFLSMEnabled reports whether the running kernel has BPF LSM active.
+// It reads /sys/kernel/security/lsm and looks for the "bpf" entry.
+// Returns false on any read error (kernel may not expose the file).
+func isBPFLSMEnabled() bool {
+	data, err := os.ReadFile("/sys/kernel/security/lsm")
+	if err != nil {
+		return false
+	}
+	for _, entry := range strings.Split(strings.TrimSpace(string(data)), ",") {
+		if strings.TrimSpace(entry) == "bpf" {
+			return true
+		}
+	}
+	return false
+}
+
+// AttachLSMProgs attaches the three LSM self-protection programs defined in
+// Section 6 of monitor.bpf.c.
+//
+// This is non-fatal: if BPF LSM is not available on the running kernel, a
+// warning is logged and the monitor continues without runtime file protection.
+// The caller should invoke this after Load() and before PopulateProtectionMaps.
+func (o *Objects) AttachLSMProgs(logger *zap.Logger) error {
+	if !isBPFLSMEnabled() {
+		logger.Warn("BPF LSM not active — self-protection hooks disabled",
+			zap.String("hint", "add 'lsm=...,bpf' to kernel boot params and reboot"),
+			zap.String("check", "/sys/kernel/security/lsm"),
+		)
+		return nil
+	}
+
+	var attached int
+	for _, def := range allLSMProgs {
+		prog, ok := o.coll.Programs[def.progKey]
+		if !ok {
+			logger.Warn("LSM program not found in BPF object — skipping",
+				zap.String("prog", def.progKey),
+				zap.String("hook", def.desc),
+			)
+			continue
+		}
+
+		// LSM programs (BPF_PROG_TYPE_LSM) use AttachLSM, not AttachTracing.
+		// AttachTracing only accepts BPF_PROG_TYPE_TRACING programs.
+		l, err := link.AttachLSM(link.LSMOptions{Program: prog})
+		if err != nil {
+			logger.Warn("failed to attach LSM hook",
+				zap.String("prog", def.progKey),
+				zap.String("hook", def.desc),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		o.links = append(o.links, l)
+		attached++
+		logger.Info("LSM hook attached", zap.String("hook", def.desc))
+	}
+
+	if attached == 0 {
+		logger.Warn("no LSM hooks attached — self-protection disabled")
+	} else {
+		logger.Info("LSM self-protection active", zap.Int("hooks", attached))
+	}
+	return nil
+}
+
+// PopulateProtectionMaps writes the monitor's PID and the inodes of all
+// protected files into the kernel-side BPF maps used by the LSM hooks.
+//
+// Call order within the function matters:
+//  1. monitor_pid is written first so is_monitor_pid() works before inodes
+//     are locked down — avoiding a window where the monitor cannot touch its
+//     own files.
+//  2. protected_inodes is populated file-by-file.
+//  3. protected_map_ids is populated last.
+//
+// protectedPaths should include the monitor binary, the BPF object, and
+// all template YAML files + their parent directories.
+//
+// This is non-fatal: a partial population (e.g. a file not found) logs a
+// warning but does not stop the monitor.
+func (o *Objects) PopulateProtectionMaps(selfPID uint32, protectedPaths []string, logger *zap.Logger) error {
+	if o.monitorPIDMap == nil || o.protectedInodesMap == nil || o.protectedMapIDsMap == nil {
+		logger.Warn("LSM protection maps not found — self-protection disabled",
+			zap.String("hint", "rebuild with Section 6 programs present in monitor.bpf.c"),
+		)
+		return nil
+	}
+
+	// ── 1. Write the monitor PID ─────────────────────────────────────────
+	pidKey := uint32(0)
+	if err := o.monitorPIDMap.Put(pidKey, selfPID); err != nil {
+		return fmt.Errorf("writing monitor_pid map: %w", err)
+	}
+	logger.Info("LSM: monitor PID registered", zap.Uint32("pid", selfPID))
+
+	// ── 2. Populate protected_inodes ─────────────────────────────────────
+	//
+	// Deduplicate paths before stat-ing so we write each inode exactly once
+	// (multiple template files may share the same parent directory inode
+	// if we also protect parent dirs, and the binary dir may be the same
+	// as the BPF object dir).
+	seenInodes := make(map[inodeKey]struct{})
+	dummy := uint32(1)
+
+	// Protect individual file inodes AND their parent directory inodes.
+	// Protecting the directory prevents adding/removing files without
+	// the user explicitly stopping the monitor.
+	allPaths := make([]string, 0, len(protectedPaths)*2)
+	for _, p := range protectedPaths {
+		allPaths = append(allPaths, p)
+		if dir := filepath.Dir(p); dir != "" && dir != "." {
+			allPaths = append(allPaths, dir)
+		}
+	}
+
+	var inodesRegistered int
+	for _, p := range allPaths {
+		key, err := fileInodeKey(p)
+		if err != nil {
+			logger.Warn("LSM: cannot stat protected path — skipping",
+				zap.String("path", p), zap.Error(err))
+			continue
+		}
+		if _, seen := seenInodes[key]; seen {
+			continue
+		}
+		seenInodes[key] = struct{}{}
+
+		if err := o.protectedInodesMap.Put(key, dummy); err != nil {
+			logger.Warn("LSM: failed to register inode",
+				zap.String("path", p),
+				zap.Uint64("ino", key.Ino),
+				zap.Error(err),
+			)
+			continue
+		}
+		inodesRegistered++
+		logger.Debug("LSM: inode protected",
+			zap.String("path", p),
+			zap.Uint64("ino", key.Ino),
+			zap.Uint32("dev", key.Dev),
+		)
+	}
+	logger.Info("LSM: inode protection active", zap.Int("inodes", inodesRegistered))
+
+	// ── 3. Populate protected_map_ids ────────────────────────────────────
+	//
+	// Protect every map in the collection, including the three new
+	// LSM guard maps themselves.
+	var mapsRegistered int
+	for name, m := range o.coll.Maps {
+		info, err := m.Info()
+		if err != nil {
+			logger.Warn("LSM: cannot get map info — skipping",
+				zap.String("map", name), zap.Error(err))
+			continue
+		}
+		id, ok := info.ID()
+		if !ok {
+			logger.Warn("LSM: map ID not available — skipping",
+				zap.String("map", name))
+			continue
+		}
+		mapID := uint32(id)
+		if err := o.protectedMapIDsMap.Put(mapID, dummy); err != nil {
+			logger.Warn("LSM: failed to register map ID",
+				zap.String("map", name), zap.Uint32("id", mapID), zap.Error(err))
+			continue
+		}
+		mapsRegistered++
+		logger.Debug("LSM: map protected", zap.String("name", name), zap.Uint32("id", mapID))
+	}
+	logger.Info("LSM: BPF map protection active", zap.Int("maps", mapsRegistered))
+
+	return nil
+}
+
+// fileInodeKey stats path and returns the inodeKey for it.
+// Works for both regular files and directories.
+func fileInodeKey(path string) (inodeKey, error) {
+	var st syscall.Stat_t
+	if err := syscall.Stat(path, &st); err != nil {
+		return inodeKey{}, fmt.Errorf("stat %q: %w", path, err)
+	}
+	return inodeKey{
+		Ino: st.Ino,
+		Dev: uint32(st.Dev),
+	}, nil
 }

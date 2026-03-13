@@ -80,6 +80,7 @@ type Edge struct {
 type Alert struct {
 	ID        string    `json:"id"`
 	Severity  string    `json:"severity"`
+	RiskScore int       `json:"risk_score"`
 	Title     string    `json:"title"`
 	Detail    string    `json:"detail,omitempty"`
 	NodeIDs   []string  `json:"node_ids"`

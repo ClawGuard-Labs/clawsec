@@ -1019,6 +1019,243 @@ int uretprobe_ssl_read(struct pt_regs *ctx)
     return __emit_tls(EVENT_TLS_RECV, buf_ptr, (__u32)ret);
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 6 — SELF-PROTECTION (eBPF LSM hooks)
+
+   Three LSM hooks protect the monitor from tampering while it is running:
+     lsm/inode_permission — block write/append to protected file inodes
+                             (binary, .bpf.o, detection templates)
+     lsm/task_kill        — block termination signals sent to the monitor PID
+     lsm/bpf_map          — block external processes from getting a writable
+                             fd to any of our eBPF maps
+
+   Requires: CONFIG_BPF_LSM=y in the running kernel AND "bpf" in the
+   active LSM list (/sys/kernel/security/lsm).  The Go loader checks this
+   at startup; if BPF LSM is unavailable these programs still compile and
+   load but are simply not attached (non-fatal degradation).
+
+   Population sequence (done by loader.PopulateProtectionMaps):
+     1. monitor_pid      ← os.Getpid()
+     2. protected_inodes ← stat(binary) + stat(.bpf.o) + stat(each template)
+     3. protected_map_ids← map.Info().ID() for every map in the collection
+
+   Until protected_inodes is populated, the inode_permission hook is a
+   no-op (hash lookup returns NULL → allow).  So there is no window where
+   the monitor blocks its own legitimate startup I/O.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * protected_inodes — set of (inode, device) pairs the monitor guards.
+ *
+ * Populated by Go at startup; never modified at runtime.
+ * Hash map: key = struct inode_key, value = u32 dummy (1 = protected).
+ * Max 256 entries: binary(1) + bpf.o(1) + templates(≤254).
+ */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 256);
+    __type(key, struct inode_key);
+    __type(value, __u32);
+} protected_inodes SEC(".maps");
+
+/*
+ * monitor_pid — PID of the running monitor process.
+ *
+ * Array map with a single element (key = 0).  Zero-initialised on load;
+ * Go writes os.Getpid() here immediately after loading.
+ * Consulted by is_monitor_pid() to allow the monitor's own writes through.
+ */
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, __u32);
+    __type(value, __u32);
+} monitor_pid SEC(".maps");
+
+/*
+ * protected_map_ids — set of BPF map IDs that belong to this monitor.
+ *
+ * Populated by Go after all maps are loaded.  Prevents an external process
+ * from calling BPF_MAP_GET_FD_BY_ID with write access on our maps, which
+ * would let it poison fd_track, proc_tree, or rate_limiter.
+ * Hash map: key = map ID (u32), value = u32 dummy (1 = protected).
+ */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 32);
+    __type(key, __u32);
+    __type(value, __u32);
+} protected_map_ids SEC(".maps");
+
+
+/* ── Shared helper ───────────────────────────────────────────────────────── */
+
+/*
+ * is_monitor_pid — returns true if the current task is the monitor process.
+ *
+ * When monitor_pid has not been set yet (value == 0), returns false for all
+ * PIDs, which is safe: protected_inodes is also empty at that point, so
+ * the inode_permission hook will pass everything through anyway.
+ */
+static __always_inline bool is_monitor_pid(void)
+{
+    __u32 zero = 0;
+    __u32 *mpid = bpf_map_lookup_elem(&monitor_pid, &zero);
+    if (!mpid || *mpid == 0)
+        return false;
+
+    __u64 pid_tgid = bpf_get_current_pid_tgid();
+    __u32 pid      = (__u32)(pid_tgid >> 32);
+    return pid == *mpid;
+}
+
+
+/* ── LSM: file write protection ──────────────────────────────────────────── */
+
+/*
+ * lsm_protect_inode — deny write/append access to monitor-owned file inodes.
+ *
+ * Called by the kernel before granting any inode permission.  We act only
+ * when the requested mask includes MAY_WRITE or MAY_APPEND, and only when
+ * the target inode is in our protected_inodes map.
+ *
+ * Allowed callers:
+ *   - The monitor itself (is_monitor_pid() == true)
+ *   - PID 1 (systemd/init) — needed for package-manager updates / stop
+ * Everyone else, including root-owned AI agent processes, gets -EPERM.
+ *
+ * Effect: while the monitor is running, no process can overwrite the binary,
+ * the BPF object, or any detection template on disk.
+ *
+ * Returns 0 to allow, -EPERM to deny.
+ */
+SEC("lsm/inode_permission")
+int BPF_PROG(lsm_protect_inode, struct inode *inode, int mask)
+{
+    /* Fast exit: only intercept write/append operations */
+    if (!(mask & (MAY_WRITE | MAY_APPEND)))
+        return 0;
+
+    /* Build the composite inode key */
+    struct inode_key key = {};
+    key.ino = BPF_CORE_READ(inode, i_ino);
+    key.dev = BPF_CORE_READ(inode, i_sb, s_dev);
+
+    /* Is this inode in our protected set? */
+    __u32 *val = bpf_map_lookup_elem(&protected_inodes, &key);
+    if (!val)
+        return 0; /* not our file — allow unconditionally */
+
+    /* Allow the monitor to write to its own files (e.g. log rotation) */
+    if (is_monitor_pid())
+        return 0;
+
+    /* Allow PID 1 (systemd) for controlled service stop / package updates */
+    __u64 pid_tgid = bpf_get_current_pid_tgid();
+    __u32 pid      = (__u32)(pid_tgid >> 32);
+    if (pid == 1)
+        return 0;
+
+    /* Deny everyone else — including other root processes */
+    return -EPERM;
+}
+
+
+/* ── LSM: process kill protection ────────────────────────────────────────── */
+
+/*
+ * lsm_protect_kill — block hard-stop signals sent to the monitor process.
+ *
+ * Intercepted signals: SIGKILL (9), SIGSTOP (19), SIGTERM (15).
+ * Other signals (SIGHUP, SIGUSR1 etc.) pass through so the monitor can
+ * still receive its own graceful-reload / config-reload signals.
+ *
+ * Allowed senders:
+ *   - The monitor itself (graceful self-shutdown path)
+ *   - PID 1 (systemd service stop)
+ * All other processes get -EPERM on SIGKILL/SIGSTOP/SIGTERM.
+ *
+ * Note: returning -EPERM from the lsm/task_kill hook prevents signal
+ * delivery even for SIGKILL — this is one of the unique powers of eBPF LSM
+ * over traditional capability checks.
+ *
+ * Returns 0 to allow, -EPERM to deny.
+ */
+SEC("lsm/task_kill")
+int BPF_PROG(lsm_protect_kill, struct task_struct *p,
+             struct kernel_siginfo *info, int sig, const struct cred *cred)
+{
+    /* Only intercept the three hard-stop signals */
+    if (sig != 9 /* SIGKILL */ && sig != 19 /* SIGSTOP */ && sig != 15 /* SIGTERM */)
+        return 0;
+
+    /* Fetch the monitor PID */
+    __u32 zero = 0;
+    __u32 *mpid = bpf_map_lookup_elem(&monitor_pid, &zero);
+    if (!mpid || *mpid == 0)
+        return 0; /* not yet initialised — allow */
+
+    /* Is the target the monitor? */
+    __u32 target_pid = BPF_CORE_READ(p, tgid);
+    if (target_pid != *mpid)
+        return 0; /* not targeting us */
+
+    /* Sender PID */
+    __u64 pid_tgid  = bpf_get_current_pid_tgid();
+    __u32 sender_pid = (__u32)(pid_tgid >> 32);
+
+    /* Allow the monitor to signal itself (Ctrl-C / graceful shutdown) */
+    if (sender_pid == *mpid)
+        return 0;
+
+    /* Allow PID 1 (systemctl stop) */
+    if (sender_pid == 1)
+        return 0;
+
+    return -EPERM;
+}
+
+
+/* ── LSM: BPF map write protection ──────────────────────────────────────── */
+
+/*
+ * lsm_protect_bpf_map — block external processes from getting a writable
+ * file descriptor to any of our eBPF maps.
+ *
+ * Fires on BPF_MAP_GET_FD_BY_ID syscalls.  If the caller does not pass
+ * BPF_F_RDONLY, the kernel calls security_bpf_map() with FMODE_CAN_WRITE
+ * set in fmode.  We deny this for any process that is not the monitor.
+ *
+ * Without this hook, an attacker with CAP_BPF could:
+ *   - Clear fd_track  → blind the monitor to all file activity
+ *   - Poison proc_tree → fake process ancestry, confuse correlator
+ *   - Flush rate_limiter → flood the ring buffer
+ *
+ * Read-only map access is allowed so bpftool / diagnostic tools still work.
+ *
+ * Returns 0 to allow, -EPERM to deny.
+ */
+SEC("lsm/bpf_map")
+int BPF_PROG(lsm_protect_bpf_map, struct bpf_map *map, fmode_t fmode)
+{
+    /* Only intercept write-capable fd requests */
+    if (!((__u64)fmode & FMODE_CAN_WRITE_BIT))
+        return 0;
+
+    /* Is this one of our maps? */
+    __u32 map_id = BPF_CORE_READ(map, id);
+    __u32 *val   = bpf_map_lookup_elem(&protected_map_ids, &map_id);
+    if (!val)
+        return 0; /* not our map */
+
+    /* Allow the monitor process — it legitimately updates fd_track etc. */
+    if (is_monitor_pid())
+        return 0;
+
+    return -EPERM;
+}
+
+
 /* Required: declares this program is GPL-licensed,
  * enabling use of GPL-only BPF helpers. */
 char LICENSE[] SEC("license") = "GPL";

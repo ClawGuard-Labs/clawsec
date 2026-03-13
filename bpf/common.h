@@ -45,6 +45,11 @@
 /* ── Model mmap threshold ────────────────────────────────────────────────── */
 #define MODEL_MMAP_THRESHOLD  (100ULL * 1024 * 1024)   /* 100 MB             */
 
+/* ── Error codes (not exposed as macros in vmlinux.h) ────────────────────── */
+#ifndef EPERM
+#define EPERM               1
+#endif
+
 /* ── Address family constants (not always in vmlinux.h for eBPF) ─────────── */
 #define AF_INET             2
 #define AF_INET6            10
@@ -208,3 +213,46 @@ struct sockaddr_in_t {
     __u32 sin_addr;     /* IPv4 in network byte order                         */
     __u8  sin_zero[8];  /* padding                                            */
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LSM Self-Protection Types and Constants
+   Used by SEC("lsm/...") programs in Section 6 of monitor.bpf.c.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * inode_key — composite BPF map key that uniquely identifies a file inode.
+ *
+ * Using both inode number and device number prevents false matches when two
+ * different filesystems happen to have the same inode number (common on
+ * tmpfs vs ext4). Must be 16 bytes to keep BPF map key alignment clean.
+ *
+ * Go mirror: loader.inodeKey  (same field order, same sizes).
+ */
+struct inode_key {
+    __u64 ino;    /* inode number — bpf_core_read(inode, i_ino)               */
+    __u32 dev;    /* block device  — bpf_core_read(inode, i_sb, s_dev)        */
+    __u32 _pad;   /* explicit 4-byte pad for 8-byte struct alignment           */
+};
+
+/*
+ * Linux VFS permission mask bits (from include/linux/fs.h).
+ * Defined with ifndef guards — vmlinux.h does not export preprocessor macros,
+ * only type definitions. Values are stable across all kernel versions we
+ * support (5.15 and 6.x).
+ */
+#ifndef MAY_WRITE
+#define MAY_WRITE   0x00000002u
+#endif
+#ifndef MAY_APPEND
+#define MAY_APPEND  0x00000008u
+#endif
+
+/*
+ * FMODE_CAN_WRITE — fmode_t bit that indicates a BPF map fd was opened
+ * for writing.  Set by the kernel in map_get_fd_by_id() when the caller
+ * does NOT pass BPF_F_RDONLY. Value is stable across 5.x / 6.x kernels.
+ *
+ * Note: this is different from FMODE_WRITE (0x2). FMODE_CAN_WRITE (0x40000)
+ * is what security_bpf_map() receives for write-capable map fds.
+ */
+#define FMODE_CAN_WRITE_BIT  0x00040000ULL

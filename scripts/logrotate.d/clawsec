@@ -1,0 +1,16 @@
+/var/log/clawsec/*.log
+/var/log/clawsec/*.json {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    sharedscripts
+    postrotate
+        # signal monitor to reopen log files if running
+        systemctl -q is-active clawsec && \
+            systemctl kill --kill-who=main --signal=SIGUSR1 clawsec || true
+    endscript
+}

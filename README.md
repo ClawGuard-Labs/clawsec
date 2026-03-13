@@ -95,7 +95,7 @@ make build          # Compile Go binary + embed eBPF object → bin/monitor
 make bpf            # Recompile eBPF C → bpf/monitor.bpf.o  (needs clang)
 make gen-vmlinux    # Regenerate vmlinux.h from kernel BTF   (once per kernel)
 make run            # Build and run as root
-make install        # Install to /usr/local/bin/ai-agent-monitor
+make install        # Install to /usr/local/bin/clawsec
 make clean          # Remove bin/
 ```
 
@@ -105,7 +105,7 @@ make clean          # Remove bin/
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/ai-agent-monitor/` |
+| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/clawsec/` |
 | `--templates <dir>` | `./templates` | Directory containing behavioral YAML detection templates |
 | `--nuclei-templates <dir>` | `./nuclei-templates` | Directory containing Nuclei YAML templates for active scanning |
 | `--no-nuclei` | false | Disable active Nuclei scanning |
@@ -373,7 +373,79 @@ sudo ./bin/monitor \
   --grouped \
   --group-timeout    500ms
 ```
+---
 
+## Running as a Background Service (systemd)
+
+The monitor ships with a systemd unit file. Use `make install` to install everything system-wide and `make enable` to start it on boot.
+
+### 1. Build and install
+
+```bash
+# Full build (eBPF + React UI + Go binary)
+make build
+
+# Install binary, BPF object, templates, and systemd unit
+sudo make install
+```
+
+`make install` places files at:
+
+| Path | Contents |
+|------|----------|
+| `/usr/local/bin/clawsec` | Binary |
+| `/usr/lib/clawsec/monitor.bpf.o` | eBPF object |
+| `/etc/clawsec/templates/` | Behavioral detection rules |
+| `/etc/clawsec/nuclei-templates/` | Nuclei active scan templates |
+| `/etc/systemd/system/clawsec.service` | systemd unit |
+| `/etc/logrotate.d/clawsec` | Log rotation config |
+
+### 2. Enable and start
+
+```bash
+# Enable on boot and start immediately
+sudo make enable
+
+# Or manually with systemctl
+sudo systemctl enable --now clawsec
+```
+
+### 3. Check status and logs
+
+```bash
+# Service status
+sudo systemctl status clawsec
+
+# Live logs (journald)
+journalctl -u clawsec -f
+
+# Output log file (NDJSON events)
+tail -f /var/log/clawsec/monitor.log
+```
+
+### 4. Stop / restart / disable
+
+```bash
+sudo systemctl stop    clawsec
+sudo systemctl restart clawsec
+sudo systemctl disable clawsec   # removes from boot
+```
+
+### 5. Uninstall
+
+```bash
+# Stops the service, disables it, and removes all installed files
+sudo make uninstall
+
+# Logs at /var/log/clawsec/ are preserved — remove manually if desired
+sudo rm -rf /var/log/clawsec/
+```
+
+The default `ExecStart` passes the installed template directories and enables the web UI on port 9090:
+
+```
+http://localhost:9090    ← live graph dashboard
+```
 ---
 
 ## SSE Live Stream
