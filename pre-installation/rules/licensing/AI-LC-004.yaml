@@ -1,0 +1,22 @@
+rule_id: AI-LC-004
+name: Llama Community License — check MAU threshold
+description: >
+  Model is under Meta Llama Community License. Includes 700M MAU
+  threshold, acceptable use policy that Meta can unilaterally modify,
+  litigation termination clause, and EU restrictions (e.g. Llama 4
+  multimodal). Requires explicit compliance review for enterprise.
+severity: MEDIUM
+action: WARN
+category: licensing
+subcategory: open-weight
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Verify 700M MAU threshold and AUP compliance. Document acceptance of
+  modification and termination terms. Check EU-specific restrictions if
+  deploying in EU. "Open weight" does not meet OSI Open Source Definition.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [llama, meta, open-weight, license]

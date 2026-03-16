@@ -1,0 +1,20 @@
+rule_id: AI-ID-004
+name: Model version not pinned (pull by name not hash)
+description: >
+  Model is referenced by name or tag rather than by immutable digest (e.g. SHA256).
+  Unpinned versions can change silently, introducing supply chain and
+  reproducibility risks. Ollama and many workflows default to pulling by name.
+severity: LOW
+action: AUDIT
+category: identity
+subcategory: versioning
+frameworks:
+  owasp_llm: [LLM03:2025]
+  nist_ai_rmf: [MAP 3.3]
+remediation: >
+  Pin model by commit hash (HuggingFace) or digest (Ollama manifest). Use
+  content-addressable references in CI/CD and deployment. Log for audit trail.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [versioning, reproducibility, supply-chain]

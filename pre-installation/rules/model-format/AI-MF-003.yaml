@@ -1,0 +1,23 @@
+rule_id: AI-MF-003
+name: High-risk format (.ckpt, .joblib, .dill)
+description: >
+  Model uses high-risk serialization format: .ckpt (PyTorch Lightning),
+  .joblib, or .dill. These formats support arbitrary code execution on
+  load. Prefer safetensors or GGUF where available.
+severity: MEDIUM
+action: WARN
+category: model-format
+subcategory: serialization
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2]
+remediation: >
+  Scan with ModelScan/Fickling before use. Prefer conversion to safetensors
+  or use models published in safe formats. Block in strict policy if
+  enterprise mandates safetensors/GGUF only.
+applicable_platforms: [huggingface]
+file_formats: [.ckpt, .joblib, .dill]
+check_type: automated
+requires_human_review: false
+tags: [serialization, joblib, dill, ckpt]

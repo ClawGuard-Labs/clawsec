@@ -1,0 +1,24 @@
+rule_id: AI-IR-001
+name: Ollama bound to 0.0.0.0 without auth proxy
+description: >
+  Ollama instance is bound to 0.0.0.0 (all interfaces) with no reverse
+  proxy authentication. Ollama has no built-in auth; 175,000+ exposed
+  servers found. All API endpoints (generate, pull, push, delete) are
+  unauthenticated. CVE-2025-63389 and others document missing auth.
+severity: CRITICAL
+action: BLOCK
+category: infrastructure
+subcategory: ollama-exposure
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+cve: [CVE-2025-63389]
+remediation: >
+  Bind to 127.0.0.1 only, or place behind reverse proxy with authentication
+  (e.g. OAuth, mTLS). Network segmentation. Do not expose Ollama directly
+  to network without auth layer.
+applicable_platforms: [ollama]
+check_type: automated
+requires_human_review: false
+tags: [ollama, authentication, exposure, network]

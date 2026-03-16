@@ -1,0 +1,26 @@
+rule_id: AI-CE-001
+name: Malicious pickle imports detected
+description: >
+  Model file contains pickle imports or opcodes enabling arbitrary code
+  execution (e.g. os, subprocess, socket, eval, exec) via static analysis.
+  PyTorch torch.load() and similar can execute code on load. CVE-2025-32434
+  affects torch.load() even with weights_only=True.
+severity: CRITICAL
+action: BLOCK
+category: code-execution
+subcategory: pickle-deserialization
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2.5]
+  eu_ai_act: [Art. 15]
+cwe: [CWE-502]
+cve: [CVE-2025-32434]
+remediation: >
+  Use safetensors format only. If pickle is unavoidable, verify source and
+  scan with ModelScan and Fickling. Block .pkl, .pt, .pth in strict policy.
+applicable_platforms: [huggingface, ollama, lm-studio]
+file_formats: [.pkl, .pt, .pth, .bin]
+check_type: automated
+requires_human_review: false
+tags: [pickle, rce, supply-chain, deserialization]

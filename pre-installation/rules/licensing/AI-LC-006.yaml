@@ -1,0 +1,21 @@
+rule_id: AI-LC-006
+name: Mistral MNPL/MRL — non-commercial only
+description: >
+  Model is under Mistral MNPL or MRL. Strictly non-commercial; cannot
+  be used for internal business operations without separate commercial
+  license from Mistral.
+severity: MEDIUM
+action: WARN
+category: licensing
+subcategory: non-commercial
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Do not use for any business purpose without Mistral commercial license.
+  For research/non-commercial only, document compliance. Prefer
+  commercial-licensed alternatives for enterprise.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [mistral, mnpl, mrl, non-commercial, license]

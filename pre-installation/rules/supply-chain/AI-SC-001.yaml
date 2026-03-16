@@ -1,0 +1,23 @@
+rule_id: AI-SC-001
+name: Typosquatting variant of top-500 model
+description: >
+  Model name is a typosquatting variant (Levenshtein distance < 3) of a
+  top-500 popular model but from a different publisher. Empirical study
+  found 1,574 squatting models targeting top-100 models; 10.4% malicious.
+  PoisonGPT used /EleuterAI (missing 'h') for poisoned GPT-J-6B.
+severity: HIGH
+action: BLOCK
+category: supply-chain
+subcategory: typosquatting
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010]
+  nist_ai_rmf: [MAP 3.3]
+  eu_ai_act: [Art. 15, Art. 17]
+remediation: >
+  Use exact model ID from official publisher. Verify organization name and
+  repo URL. Maintain allow-list of approved model IDs for enterprise pull.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [typosquatting, supply-chain, identity]

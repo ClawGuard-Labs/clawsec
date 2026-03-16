@@ -1,0 +1,21 @@
+rule_id: AI-LC-007
+name: License has acceptable use restrictions
+description: >
+  License permits commercial use but includes acceptable use policy (AUP)
+  or use-based restrictions (e.g. Stability CreativeML RAIL++) that
+  propagate to all derivatives. Requires ongoing compliance monitoring.
+severity: LOW
+action: AUDIT
+category: licensing
+subcategory: aup
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Document AUP and ensure use case complies. Track license updates;
+  AUPs can change. Include in compliance audit trail. Legal review
+  recommended for high-stakes deployment.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [aup, license, compliance]

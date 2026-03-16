@@ -1,0 +1,22 @@
+rule_id: AI-RC-001
+name: High-risk EU AI Act classification possible
+description: >
+  Model deployment context may qualify as high-risk under EU AI Act (e.g.
+  critical infrastructure, education, employment, essential services).
+  Requires conformity assessment and documentation; classification is
+  context-dependent and may require legal review.
+severity: LOW
+action: AUDIT
+category: regulatory
+subcategory: eu-ai-act
+frameworks:
+  eu_ai_act: [Art. 6, Annex III]
+  nist_ai_rmf: [GOVERN 1.1]
+remediation: >
+  Defer to legal/compliance for risk classification. Document deployment
+  context and intended use. If high-risk, ensure conformity assessment and
+  technical documentation per EU AI Act requirements.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: human-review
+requires_human_review: true
+tags: [eu-ai-act, high-risk, compliance]

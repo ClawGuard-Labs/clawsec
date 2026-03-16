@@ -1,0 +1,23 @@
+rule_id: AI-IR-005
+name: Inference container lacks seccomp or AppArmor
+description: >
+  Container or runtime used for model inference has no seccomp profile or
+  AppArmor (or equivalent) confinement. Untrusted or third-party models
+  should run in hardened containers to limit impact of malicious payloads
+  (e.g. from pickle or template injection).
+severity: MEDIUM
+action: WARN
+category: infrastructure
+subcategory: isolation
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+remediation: >
+  Enable seccomp and AppArmor (or equivalent) for inference containers.
+  Drop unnecessary capabilities. For untrusted models, consider gVisor
+  or Kata Containers for stronger isolation.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [seccomp, apparmor, container, isolation]

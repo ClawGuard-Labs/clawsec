@@ -1,0 +1,25 @@
+rule_id: AI-SC-002
+name: Publisher namespace was deleted and re-registered
+description: >
+  Model publisher namespace was previously deleted and re-registered.
+  Palo Alto Unit 42 found that when HuggingFace authors delete accounts,
+  the namespace becomes available; attackers re-register and upload
+  malicious model versions. Orphaned models also found in cloud model
+  catalogs.
+severity: HIGH
+action: BLOCK
+category: supply-chain
+subcategory: namespace-hijacking
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010]
+  nist_ai_rmf: [MAP 3.3]
+  eu_ai_act: [Art. 15, Art. 17]
+remediation: >
+  Integrate namespace-reuse feed; block models from re-registered namespaces
+  unless explicitly allow-listed. Prefer models from long-standing verified
+  organizations.
+applicable_platforms: [huggingface]
+check_type: automated
+requires_human_review: false
+tags: [namespace-hijacking, supply-chain, identity]

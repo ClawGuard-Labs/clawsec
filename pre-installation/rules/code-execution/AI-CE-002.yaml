@@ -1,0 +1,23 @@
+rule_id: AI-CE-002
+name: Known malware signature detected (ClamAV)
+description: >
+  ClamAV (or equivalent) scan detected known malware signature in model
+  files or repository contents. Real incidents include models containing
+  reverse shells and RATs (e.g. baller423/goober2, Go-based RATs via
+  Cloudflare Tunnel C2).
+severity: CRITICAL
+action: BLOCK
+category: code-execution
+subcategory: malware
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2.5]
+  eu_ai_act: [Art. 15]
+remediation: >
+  Do not install. Quarantine and report. Re-scan with updated signatures.
+  Prefer models from verified publishers and safetensors-only sources.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [malware, clamav, supply-chain]

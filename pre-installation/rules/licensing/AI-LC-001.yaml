@@ -1,0 +1,22 @@
+rule_id: AI-LC-001
+name: No license specified (all rights reserved)
+description: >
+  Model has no license specified. Under copyright law this defaults to
+  "all rights reserved"; any enterprise use is legally risky. Only ~35%
+  of HuggingFace models bear any license (Mend.io analysis).
+severity: HIGH
+action: BLOCK
+category: licensing
+subcategory: missing-license
+frameworks:
+  owasp_llm: [LLM03:2025]
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Do not use for production without legal review. Request license from
+  publisher or select alternative model with clear license (e.g. Apache
+  2.0, MIT for permissive commercial use).
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [license, compliance, all-rights-reserved]

@@ -1,0 +1,23 @@
+rule_id: AI-IR-007
+name: Serving endpoint lacks rate limiting
+description: >
+  Model serving endpoint (Ollama, custom API, etc.) has no rate limiting
+  configured. Enables abuse, resource exhaustion (e.g. sponge attacks
+  exploiting quadratic attention cost), and DoS. Sponge attacks have
+  shown 30× latency increase and 6000× degradation in some services.
+severity: LOW
+action: AUDIT
+category: infrastructure
+subcategory: rate-limiting
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+remediation: >
+  Configure rate limiting at reverse proxy or application layer. Set
+  request/time and token limits. Monitor for abuse patterns. Log for
+  operations and capacity planning.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [rate-limiting, dos, abuse]

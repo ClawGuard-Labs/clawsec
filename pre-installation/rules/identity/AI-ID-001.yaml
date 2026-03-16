@@ -1,0 +1,24 @@
+rule_id: AI-ID-001
+name: Model card missing or incomplete
+description: >
+  Model has no model card or the model card is incomplete (e.g. missing
+  training data section, intended use, limitations). Model cards are
+  self-reported and unverified but are the primary documentation for
+  training data and safety considerations.
+severity: MEDIUM
+action: WARN
+category: identity
+subcategory: model-card
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.CS0028]
+  nist_ai_rmf: [MAP 1.1]
+  eu_ai_act: [Art. 13, Annex IV]
+remediation: >
+  Request or create a model card with training data description, intended use,
+  limitations, and "Considerations for Using the Data". Treat undocumented
+  models as higher risk for deployment.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [model-card, documentation, training-data]

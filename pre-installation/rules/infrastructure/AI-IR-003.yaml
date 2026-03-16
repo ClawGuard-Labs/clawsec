@@ -1,0 +1,24 @@
+rule_id: AI-IR-003
+name: NVIDIA Container Toolkit below 1.17.4
+description: >
+  NVIDIA Container Toolkit (for GPU workloads) version is below 1.17.4.
+  CVE-2025-23266 ("NVIDIAScape", CVSS 9.0) enables container escape via
+  OCI hook misconfiguration — exploitable with a 3-line Dockerfile.
+  GPU security is critical for multi-tenant AI workloads.
+severity: HIGH
+action: BLOCK
+category: infrastructure
+subcategory: gpu-container
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+cve: [CVE-2025-23266]
+remediation: >
+  Update NVIDIA Container Toolkit to ≥ 1.17.4. Harden container runtime
+  (seccomp, AppArmor). Prefer Kata Containers or gVisor for untrusted
+  workloads where feasible.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [nvidia, container, gpu, escape]

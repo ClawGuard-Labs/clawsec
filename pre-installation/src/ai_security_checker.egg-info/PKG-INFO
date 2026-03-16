@@ -1,0 +1,123 @@
+Metadata-Version: 2.4
+Name: ai-security-checker
+Version: 0.1.0
+Summary: Pre-installation security checker for AI/ML models
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: pydantic>=2.0
+Requires-Dist: typer[all]>=0.9
+Requires-Dist: rich>=13.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: jsonschema>=4.0; extra == "dev"
+
+# Pre-Installation AI Security Ruleset
+
+This directory contains the **rule definitions** for the AI Security Checker pre-installation phase. Before any pre-trained AI model (HuggingFace, Ollama, LM Studio) is permitted to run in an enterprise environment, the checker runs a pipeline of scans and evaluates results against this ruleset. Each rule has an **action** (BLOCK, WARN, or AUDIT) that determines whether installation is blocked, allowed with acknowledgment, or only logged for compliance.
+
+## How a checker uses this ruleset
+
+The rules are consumed by the **AI Security Checker** described in [../ai_security_checker_implementation_plan.md](../ai_security_checker_implementation_plan.md). The checker:
+
+1. Loads all YAML files under `pre-installation/rules/` (one file per rule).
+2. Runs scanner modules (serialization, malware, HuggingFace API, license engine, Garak, etc.) that produce **findings** keyed by `rule_id`.
+3. For each finding, looks up the rule by `rule_id` and applies its **action** (BLOCK / WARN / AUDIT).
+4. A single **BLOCK** finding halts the pipeline and denies installation; WARN requires explicit acceptance; AUDIT is logged only.
+
+Rule metadata (severity, remediation, frameworks) is used for reporting (SARIF, HTML, SIEM) and for override/policy logic.
+
+## Rule categories and training data focus
+
+Rules are grouped by **category** (directory under `rules/`). The following categories directly address **what data the model was trained on** and **security issues in training data** for pre-trained models:
+
+| Category | Rule prefix | Focus |
+|----------|-------------|--------|
+| **data-provenance** | AI-DP | Training data sources, web scrapes, AI-BOM availability |
+| **identity** | AI-ID | Model card, training data section, uncensored/jailbroken naming, version pinning |
+| **privacy** | AI-PD | PII scrubbing, memorization risk for large models |
+| **behavior-alignment** | AI-BA | Safety evaluation, Garak ASR, benchmarks (HarmBench, TruthfulQA) |
+| **regulatory** | AI-RC | GDPR (EU personal data in training), EU AI Act, export control |
+
+Other categories cover **supply chain and integrity** (can we trust this artifact?), **licensing**, and **infrastructure**:
+
+| Category | Rule prefix | Focus |
+|----------|-------------|--------|
+| code-execution | AI-CE | Pickle/malware, trust_remote_code, malicious deps |
+| supply-chain | AI-SC | Typosquatting, namespace hijacking, signing, provenance |
+| model-format | AI-MF | Safetensors vs pickle, GGUF Jinja2 template risk |
+| licensing | AI-LC | No license, AGPL, CC BY-NC, Llama/Gemma/Mistral, AUP |
+| infrastructure | AI-IR | Ollama binding/version, NVIDIA container, VRAM, seccomp, rate limiting |
+
+## Complete rule inventory
+
+| Rule ID | Name | Action | Category |
+|---------|------|--------|----------|
+| AI-CE-001 | Malicious pickle imports detected | BLOCK | code-execution |
+| AI-CE-002 | Known malware signature detected (ClamAV) | BLOCK | code-execution |
+| AI-CE-003 | Model hash matches known malicious database | BLOCK | code-execution |
+| AI-CE-004 | trust_remote_code=True required with unverified publisher | BLOCK | code-execution |
+| AI-CE-005 | Malicious packages in requirements or setup | BLOCK | code-execution |
+| AI-SC-001 | Typosquatting variant of top-500 model | BLOCK | supply-chain |
+| AI-SC-002 | Publisher namespace was deleted and re-registered | BLOCK | supply-chain |
+| AI-LC-001 | No license specified (all rights reserved) | BLOCK | licensing |
+| AI-LC-002 | AGPL license — SaaS copyleft incompatible | BLOCK | licensing |
+| AI-LC-003 | CC BY-NC — prohibits commercial use | BLOCK | licensing |
+| AI-IR-001 | Ollama bound to 0.0.0.0 without auth proxy | BLOCK | infrastructure |
+| AI-IR-002 | Ollama below minimum security version | BLOCK | infrastructure |
+| AI-IR-003 | NVIDIA Container Toolkit below 1.17.4 | BLOCK | infrastructure |
+| AI-MF-001 | Pickle format when safetensors alternative exists | WARN | model-format |
+| AI-MF-002 | GGUF contains Jinja2 chat template (SSTI risk) | WARN | model-format |
+| AI-MF-003 | High-risk format (.ckpt, .joblib, .dill) | WARN | model-format |
+| AI-SC-003 | Publisher is not a verified HuggingFace organization | WARN | supply-chain |
+| AI-SC-004 | No signed commits on model repository | WARN | supply-chain |
+| AI-SC-005 | Fine-tune of unknown or unverified base model | WARN | supply-chain |
+| AI-ID-001 | Model card missing or incomplete | WARN | identity |
+| AI-ID-002 | Uncensored or unfiltered in model name or tags | WARN | identity |
+| AI-LC-004 | Llama Community License — check MAU threshold | WARN | licensing |
+| AI-LC-005 | Gemma Terms — synthetic data license propagates | WARN | licensing |
+| AI-LC-006 | Mistral MNPL/MRL — non-commercial only | WARN | licensing |
+| AI-BA-001 | Fine-tuned with no safety evaluation documentation | WARN | behavior-alignment |
+| AI-BA-002 | Garak attack success rate exceeds 15% threshold | WARN | behavior-alignment |
+| AI-DP-001 | Training data includes unfiltered web scrapes | WARN | data-provenance |
+| AI-PD-001 | Model over 7B parameters with no documented PII scrubbing | WARN | privacy |
+| AI-IR-004 | Model VRAM exceeds available GPU memory | WARN | infrastructure |
+| AI-IR-005 | Inference container lacks seccomp or AppArmor | WARN | infrastructure |
+| AI-ID-003 | Model card present but training data section empty | AUDIT | identity |
+| AI-ID-004 | Model version not pinned (pull by name not hash) | AUDIT | identity |
+| AI-LC-007 | License has acceptable use restrictions | AUDIT | licensing |
+| AI-LC-008 | Base model license differs from derivative | AUDIT | licensing |
+| AI-RC-001 | High-risk EU AI Act classification possible | AUDIT | regulatory |
+| AI-RC-002 | Possible GPAI transparency obligations | AUDIT | regulatory |
+| AI-RC-003 | Training data may contain EU personal data | AUDIT | regulatory |
+| AI-RC-004 | US export control review may be required | AUDIT | regulatory |
+| AI-DP-002 | No AI-BOM available for this model | AUDIT | data-provenance |
+| AI-BA-003 | Behavioral benchmarks not run within last 90 days | AUDIT | behavior-alignment |
+| AI-BA-004 | TruthfulQA score below peer median for model class | AUDIT | behavior-alignment |
+| AI-IR-006 | GPU driver not on latest security patch | AUDIT | infrastructure |
+| AI-IR-007 | Serving endpoint lacks rate limiting | AUDIT | infrastructure |
+
+## Training data and provenance rules (summary)
+
+These rules specifically address **what data the model was trained on** and **security issues in that data**:
+
+- **AI-DP-001** — Training data includes unfiltered web scrapes (CommonCrawl, C4) without documented filtering; increases poisoning and memorization risk.
+- **AI-DP-002** — No AI-BOM; no machine-readable supply chain or training data transparency.
+- **AI-ID-001** — Model card missing or incomplete (no training data section).
+- **AI-ID-003** — Model card exists but training data provenance section is empty.
+- **AI-PD-001** — Large model (>7B) with no documented PII scrubbing; memorization risk.
+- **AI-BA-001** — Fine-tuned model with no safety evaluation docs; alignment and backdoor risk.
+- **AI-BA-002** — Garak ASR > 15%; behavioral/jailbreak risk.
+- **AI-BA-003** — No recent behavioral benchmarks; freshness of safety assessment.
+- **AI-BA-004** — TruthfulQA below peer median; misinformation risk.
+- **AI-RC-003** — Training data may contain EU personal data; GDPR and right-to-erasure considerations.
+
+## Schema and validation
+
+- **Schema**: [../schema/rule_schema.json](../schema/rule_schema.json) (JSON Schema for a single rule).
+- **Validation**: Run `python pre-installation/scripts/validate_rules.py` from the repo root. Requires Python 3 and PyYAML; optional `jsonschema` for full schema validation. Ensures all rule files load, have required fields, and that the expected number of unique rule_ids are present.
+
+## References
+
+- [Compass artifact](../compass_artifact_wf-bb0d2228-8111-4dde-a481-0962834f8016_text_markdown.md) — Threat taxonomy, framework mappings (OWASP LLM, MITRE ATLAS, NIST AI RMF, EU AI Act), and rule rationale.
+- [AI Security Checker Implementation Plan](../ai_security_checker_implementation_plan.md) — Full 16-week implementation roadmap, scanner modules, and CI/CD integration.

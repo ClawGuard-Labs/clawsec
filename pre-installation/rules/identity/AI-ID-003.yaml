@@ -1,0 +1,22 @@
+rule_id: AI-ID-003
+name: Model card present but training data section empty
+description: >
+  Model has a model card but the training data provenance section is empty
+  or absent. Only ~2% of HuggingFace dataset cards include "Considerations for
+  Using the Data". Without this, training data security cannot be assessed.
+severity: LOW
+action: AUDIT
+category: identity
+subcategory: training-data-provenance
+frameworks:
+  owasp_llm: [LLM04:2025]
+  nist_ai_rmf: [MAP 2]
+  eu_ai_act: [Art. 10, Art. 53]
+remediation: >
+  Log for compliance. Request training data documentation from publisher.
+  Assume unknown provenance for risk assessment. Consider behavioral testing
+  in sandbox before production use.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [model-card, training-data, provenance]

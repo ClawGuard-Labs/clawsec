@@ -1,0 +1,23 @@
+rule_id: AI-IR-002
+name: Ollama below minimum security version
+description: >
+  Ollama version is below minimum security baseline (e.g. 0.3.13 or
+  org-configured minimum). Multiple critical CVEs (path traversal RCE,
+  Zip Slip, DNS rebinding, DoS) have been fixed in recent versions.
+  CVE-2024-37032 (Probllama), CVE-2024-45436, others.
+severity: HIGH
+action: BLOCK
+category: infrastructure
+subcategory: ollama-version
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+cve: [CVE-2024-37032, CVE-2024-45436, CVE-2024-28224]
+remediation: >
+  Upgrade Ollama to minimum secure version (configurable, default ≥ 0.3.13).
+  Subscribe to Ollama security advisories. Pin version in deployment.
+applicable_platforms: [ollama]
+check_type: automated
+requires_human_review: false
+tags: [ollama, version, cve]

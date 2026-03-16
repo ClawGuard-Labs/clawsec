@@ -1,0 +1,21 @@
+rule_id: AI-LC-002
+name: AGPL license — SaaS copyleft incompatible
+description: >
+  Model is under AGPL. Network copyleft can force open-sourcing of
+  SaaS stacks that use the model. Incompatible with many enterprise
+  deployment models without explicit legal exception.
+severity: HIGH
+action: BLOCK
+category: licensing
+subcategory: copyleft
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Do not deploy in SaaS or network-exposed form without legal review.
+  Prefer Apache 2.0, MIT, or other permissive licenses for enterprise
+  use. Document license and deployment context for compliance.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [agpl, copyleft, license]

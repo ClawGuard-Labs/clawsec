@@ -1,0 +1,23 @@
+rule_id: AI-MF-001
+name: Pickle format when safetensors alternative exists
+description: >
+  Model uses pickle-based format (.pt, .bin, .pkl) when a safetensors
+  version is available for the same model. Safetensors is the security
+  answer: zero code execution capability, Trail of Bits audited. ~44.9%
+  of HuggingFace repos still use pickle formats.
+severity: MEDIUM
+action: WARN
+category: model-format
+subcategory: serialization
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2]
+remediation: >
+  Prefer safetensors. If only pickle is available, verify source and run
+  ModelScan/Fickling. Consider enterprise policy mandating safetensors-only.
+applicable_platforms: [huggingface]
+file_formats: [.pt, .pth, .pkl, .bin]
+check_type: automated
+requires_human_review: false
+tags: [safetensors, pickle, format]

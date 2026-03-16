@@ -1,0 +1,21 @@
+rule_id: AI-LC-008
+name: Base model license differs from derivative
+description: >
+  Fine-tuned or derived model has a different license than its base model.
+  Audit found 35.5% of model-to-application transitions eliminate
+  restrictive clauses — systematic non-compliance risk across ecosystem.
+severity: LOW
+action: AUDIT
+category: licensing
+subcategory: derivative-compliance
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Verify derivative license is compatible with base model license.
+  Document license chain. Legal review for production use. Log for
+  compliance and audit.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [derivative, license, compliance, base-model]

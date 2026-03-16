@@ -1,0 +1,23 @@
+rule_id: AI-SC-003
+name: Publisher is not a verified HuggingFace organization
+description: >
+  Model publisher does not have verified organization badge on HuggingFace.
+  Verification indicates identity confirmation; unverified publishers pose
+  higher supply chain and typosquatting risk.
+severity: MEDIUM
+action: WARN
+category: supply-chain
+subcategory: publisher-verification
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.CS0028]
+  nist_ai_rmf: [MAP 1.1]
+  eu_ai_act: [Art. 13, Annex IV]
+remediation: >
+  Prefer models from verified organizations (e.g. meta-llama, google, etc.).
+  For unverified publishers, require additional review and sandbox testing
+  before production use.
+applicable_platforms: [huggingface]
+check_type: automated
+requires_human_review: false
+tags: [verification, publisher, supply-chain]

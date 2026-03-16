@@ -1,0 +1,25 @@
+rule_id: AI-MF-002
+name: GGUF contains Jinja2 chat template (SSTI risk)
+description: >
+  GGUF file contains chat_template in metadata; template may include
+  Jinja2 that is rendered at inference. CVE-2024-34359 ("Llama Drama")
+  enables server-side template injection. Poisoned templates can embed
+  persistent malicious instructions; LM Studio loads templates automatically.
+severity: MEDIUM
+action: WARN
+category: model-format
+subcategory: gguf-template
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2]
+cve: [CVE-2024-34359]
+remediation: >
+  Extract and audit chat_template from GGUF metadata. Run Jinja2 AST scan
+  for dangerous constructs (__class__, __globals__, etc.). Prefer GGUF from
+  trusted sources; sandbox template rendering if possible.
+applicable_platforms: [ollama, lm-studio]
+file_formats: [.gguf]
+check_type: automated
+requires_human_review: false
+tags: [gguf, jinja2, ssti, template-injection]

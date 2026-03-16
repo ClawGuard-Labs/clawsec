@@ -1,0 +1,25 @@
+rule_id: AI-PD-001
+name: Model over 7B parameters with no documented PII scrubbing
+description: >
+  Model size exceeds 7B parameters with no documented PII scrubbing or
+  deduplication of training data. Memorization scales log-linearly with
+  model size; larger models pose higher risk of memorizing and leaking
+  personal data (names, emails, phone numbers, code).
+severity: MEDIUM
+action: WARN
+category: privacy
+subcategory: memorization
+frameworks:
+  owasp_llm: [LLM02]
+  mitre_atlas: [AML.T0024]
+  nist_ai_rmf: [MEASURE 2.11]
+  eu_ai_act: [Art. 10]
+remediation: >
+  Request documentation of PII filtering or use models with published
+  privacy measures. Consider membership inference testing (e.g. Min-K% Prob)
+  in sandbox. For high-sensitivity use, prefer smaller or explicitly
+  privacy-trained models.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: semi-automated
+requires_human_review: false
+tags: [privacy, pii, memorization, training-data]

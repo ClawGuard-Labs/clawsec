@@ -1,0 +1,20 @@
+rule_id: AI-RC-004
+name: US export control review may be required
+description: >
+  Model distribution or deployment may trigger US export control review
+  (EAR). Previous AI Diffusion Rule (ECCN 4E091) was rescinded; existing
+  EAR provisions still apply to embargoed destinations and Entity List.
+  Deployment to certain jurisdictions may require compliance review.
+severity: LOW
+action: AUDIT
+category: regulatory
+subcategory: export-control
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+remediation: >
+  Defer to export compliance. Document deployment geography and any
+  re-export. Monitor regulatory updates on AI model export controls.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: human-review
+requires_human_review: true
+tags: [export-control, ear, compliance]

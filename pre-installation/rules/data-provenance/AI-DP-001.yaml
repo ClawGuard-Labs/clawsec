@@ -1,0 +1,21 @@
+rule_id: AI-DP-001
+name: Training data includes unfiltered web scrapes
+description: >
+  Model card or AI-BOM indicates training data from known web scrape datasets
+  (e.g. CommonCrawl, C4) without documented filtering or deduplication.
+  Increases risk of data poisoning, memorization of PII, and backdoors.
+severity: MEDIUM
+action: WARN
+category: data-provenance
+subcategory: training-data-quality
+frameworks:
+  owasp_llm: [LLM04:2025]
+  mitre_atlas: [AML.T0020]
+remediation: >
+  Prefer models with documented training data curation and filtering.
+  Request AI-BOM or model card with "Considerations for Using the Data" and
+  filtering methodology. Run behavioral and membership-inference tests in sandbox.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: semi-automated
+requires_human_review: false
+tags: [training-data, poisoning, model-card]

@@ -1,0 +1,23 @@
+rule_id: AI-ID-002
+name: Uncensored or unfiltered in model name or tags
+description: >
+  Model name or tags contain "uncensored", "unfiltered", "jailbroken", or
+  "NSFW". Such variants often have safety guardrails deliberately removed
+  and may include known sleeper-agent or misaligned fine-tunes (e.g. dolphin
+  variants). Enterprise use requires explicit risk acceptance.
+severity: MEDIUM
+action: WARN
+category: identity
+subcategory: alignment
+frameworks:
+  owasp_llm: [LLM04:2025, LLM09]
+  mitre_atlas: [AML.T0018]
+  eu_ai_act: [Art. 9]
+remediation: >
+  Prefer models with documented safety evaluation. If using uncensored
+  variants, run HarmBench/JailbreakBench and document business justification.
+  Isolate in sandboxed inference environment.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [alignment, safety, uncensored, jailbreak]

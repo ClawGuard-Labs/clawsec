@@ -1,0 +1,23 @@
+rule_id: AI-RC-003
+name: Training data may contain EU personal data
+description: >
+  Model card or AI-BOM indicates training data that may include EU personal
+  data (e.g. web scrapes, social media). Triggers GDPR considerations:
+  legal basis, right to erasure (Art. 17), and documentation requirements.
+  Machine unlearning is not yet production-ready.
+severity: LOW
+action: AUDIT
+category: regulatory
+subcategory: gdpr
+frameworks:
+  owasp_llm: [LLM02]
+  nist_ai_rmf: [MEASURE 2.11]
+  eu_ai_act: [Art. 10, Art. 53]
+remediation: >
+  Assess legal basis for processing. Document data sources and any filtering.
+  Consider CNIL-style alternatives (output filtering, suppression logic) where
+  erasure is impractical. Log for DPO and compliance review.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: semi-automated
+requires_human_review: false
+tags: [gdpr, personal-data, training-data, eu]

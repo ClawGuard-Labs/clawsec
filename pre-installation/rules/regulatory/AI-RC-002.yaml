@@ -1,0 +1,22 @@
+rule_id: AI-RC-002
+name: Possible GPAI transparency obligations
+description: >
+  Model may qualify as general-purpose AI (GPAI) under EU AI Act, triggering
+  transparency obligations (e.g. documentation, disclosure of training data
+  summary, downstream documentation). Thresholds and interpretation are
+  evolving.
+severity: LOW
+action: AUDIT
+category: regulatory
+subcategory: gpai
+frameworks:
+  eu_ai_act: [Art. 52, Art. 53]
+  nist_ai_rmf: [GOVERN 1.1]
+remediation: >
+  Document model capabilities and training data summary. Track EU AI Act
+  guidance on GPAI thresholds. Prepare technical documentation for
+  downstream providers if applicable.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: human-review
+requires_human_review: true
+tags: [gpai, eu-ai-act, transparency]

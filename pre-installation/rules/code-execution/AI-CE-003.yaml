@@ -1,0 +1,21 @@
+rule_id: AI-CE-003
+name: Model hash matches known malicious database
+description: >
+  Model file hash (e.g. SHA256) matches a known malicious model in the
+  threat intelligence database. Over 100 malicious models have been
+  identified on HuggingFace by security researchers.
+severity: CRITICAL
+action: BLOCK
+category: code-execution
+subcategory: known-bad
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010]
+  nist_ai_rmf: [MEASURE 2.5]
+remediation: >
+  Do not install. Block and alert. Update hash database from trusted feeds
+  (e.g. JFrog, Sonatype, vendor advisories).
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [malicious-hash, threat-intel, supply-chain]

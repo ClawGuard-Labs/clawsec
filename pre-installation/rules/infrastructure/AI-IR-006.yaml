@@ -1,0 +1,22 @@
+rule_id: AI-IR-006
+name: GPU driver not on latest security patch
+description: >
+  GPU driver (NVIDIA, AMD ROCm, etc.) is not on a version that includes
+  latest security patches. GPU is an underappreciated attack surface;
+  CVEs have enabled host takeover and container escape. AMD Instinct
+  (MI210/MI250/MI300) affected by CVE-2024-36342 until ROCm 6.4+.
+severity: LOW
+action: AUDIT
+category: infrastructure
+subcategory: gpu-driver
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+remediation: >
+  Update GPU driver to patched version. Subscribe to vendor security
+  advisories. Log for compliance and maintenance schedule.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [gpu, driver, security-patch]

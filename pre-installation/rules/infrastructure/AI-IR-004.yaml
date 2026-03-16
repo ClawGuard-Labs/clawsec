@@ -1,0 +1,22 @@
+rule_id: AI-IR-004
+name: Model VRAM exceeds available GPU memory
+description: >
+  Model resource requirements exceed available GPU VRAM. Loading will
+  cause OOM (out-of-memory) or fallback to CPU with severe performance
+  impact. Can also cause instability or denial of service in shared
+  environments.
+severity: MEDIUM
+action: WARN
+category: infrastructure
+subcategory: resources
+frameworks:
+  owasp_llm: [LLM10]
+  mitre_atlas: [AML.T0049]
+  nist_ai_rmf: [MANAGE 4]
+remediation: >
+  Select smaller model or add GPU capacity. Use quantization (e.g. GGUF
+  Q4) to reduce VRAM. Document resource requirements in deployment spec.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [vram, gpu, resources, oom]

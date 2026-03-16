@@ -1,0 +1,19 @@
+rule_id: AI-DP-002
+name: No AI-BOM available for this model
+description: >
+  No AI Bill of Materials (CycloneDX ML-BOM or SPDX with AI/Dataset profiles)
+  is available for the model. AI-BOM enables supply chain transparency and
+  audit trails for training data and dependencies.
+severity: LOW
+action: AUDIT
+category: data-provenance
+subcategory: transparency
+frameworks:
+  nist_ai_rmf: [MAP 2]
+remediation: >
+  Generate AI-BOM using AIsbom or similar tool. Prefer models that publish
+  CycloneDX v1.6 or SPDX 3.0.1 with AI profile. Log finding for compliance trail.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [ai-bom, supply-chain, transparency]

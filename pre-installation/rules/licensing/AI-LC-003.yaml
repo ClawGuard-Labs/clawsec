@@ -1,0 +1,21 @@
+rule_id: AI-LC-003
+name: CC BY-NC — prohibits commercial use
+description: >
+  Model is under Creative Commons Non-Commercial (CC BY-NC). All
+  commercial use is prohibited. Enterprise internal use may still
+  qualify as commercial depending on jurisdiction and interpretation.
+severity: HIGH
+action: BLOCK
+category: licensing
+subcategory: non-commercial
+frameworks:
+  nist_ai_rmf: [GOVERN 1.1]
+  eu_ai_act: [Art. 53]
+remediation: >
+  Do not use for any commercial or business purpose. Select alternative
+  with commercial-friendly license (Apache 2.0, MIT, etc.) or obtain
+  separate commercial license from rightsholder.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: automated
+requires_human_review: false
+tags: [cc-by-nc, non-commercial, license]

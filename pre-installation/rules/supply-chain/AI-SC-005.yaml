@@ -1,0 +1,22 @@
+rule_id: AI-SC-005
+name: Fine-tune of unknown or unverified base model
+description: >
+  Model is a fine-tuned derivative but base model is unknown or not in
+  approved/verified list. Provenance chain incomplete; fine-tuning can
+  propagate or amplify backdoors and alignment issues from base model.
+severity: MEDIUM
+action: WARN
+category: supply-chain
+subcategory: provenance-chain
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010]
+  nist_ai_rmf: [MAP 2]
+remediation: >
+  Document base model and fine-tuning recipe. Scan base model with same
+  ruleset before approving derivative. Prefer derivatives of approved
+  base models only.
+applicable_platforms: [huggingface, ollama, lm-studio]
+check_type: semi-automated
+requires_human_review: false
+tags: [fine-tuning, base-model, provenance]

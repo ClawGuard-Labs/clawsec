@@ -1,0 +1,22 @@
+rule_id: AI-CE-005
+name: Malicious packages in requirements or setup
+description: >
+  Model repository contains setup.py, requirements.txt, or similar with
+  known malicious or typosquatted package names. Dependencies can
+  introduce supply chain compromise when model is loaded or run.
+severity: HIGH
+action: BLOCK
+category: code-execution
+subcategory: dependencies
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010]
+  nist_ai_rmf: [MEASURE 2.5]
+remediation: >
+  Do not install. Audit all dependencies against vulnerability and
+  typosquatting databases. Prefer models with minimal or no custom
+  dependencies; pin and verify all package hashes.
+applicable_platforms: [huggingface]
+check_type: automated
+requires_human_review: false
+tags: [dependencies, supply-chain, typosquatting]

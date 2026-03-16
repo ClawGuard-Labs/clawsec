@@ -1,0 +1,21 @@
+rule_id: AI-SC-004
+name: No signed commits on model repository
+description: >
+  Model repository has no GPG-signed commits. HuggingFace shows "Verified"
+  for signed commits; unsigned history offers no cryptographic assurance
+  of author identity or integrity of repo contents.
+severity: MEDIUM
+action: WARN
+category: supply-chain
+subcategory: signing
+frameworks:
+  owasp_llm: [LLM03:2025]
+  nist_ai_rmf: [MAP 3.3]
+  eu_ai_act: [Art. 17]
+remediation: >
+  Prefer models with signed commits. For critical use, consider sigstore
+  model-transparency or similar keyless signing. Log for audit trail.
+applicable_platforms: [huggingface]
+check_type: automated
+requires_human_review: false
+tags: [signed-commits, gpg, provenance]

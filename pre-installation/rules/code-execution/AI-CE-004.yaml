@@ -1,0 +1,23 @@
+rule_id: AI-CE-004
+name: trust_remote_code=True required with unverified publisher
+description: >
+  Model requires trust_remote_code=True to load (custom modeling_*.py or
+  configuration_*.py from repo). When enabled, HuggingFace transformers
+  executes arbitrary Python code from the model repository. Unverified
+  publishers pose high code-execution risk.
+severity: HIGH
+action: BLOCK
+category: code-execution
+subcategory: remote-code
+frameworks:
+  owasp_llm: [LLM03:2025]
+  mitre_atlas: [AML.T0010.003]
+  nist_ai_rmf: [MEASURE 2.5]
+remediation: >
+  Use only with verified/trusted publishers. Prefer models that do not
+  require trust_remote_code. If required, audit custom code and run in
+  sandbox. ConfigScan and similar can assess repo file-operation risks.
+applicable_platforms: [huggingface]
+check_type: automated
+requires_human_review: false
+tags: [trust_remote_code, code-execution, huggingface]
