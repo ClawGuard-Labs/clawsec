@@ -42,8 +42,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/constants"
-	"github.com/ai-agent-monitor/internal/consumer"
+	"github.com/clawsec/internal/constants"
+	"github.com/clawsec/internal/consumer"
 )
 
 // ─── constants ───────────────────────────────────────────────────────────────

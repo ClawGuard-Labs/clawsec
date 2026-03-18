@@ -1,4 +1,4 @@
-// ai-agent-monitor — host-level eBPF monitoring for AI agent processes.
+// clawsec — host-level eBPF monitoring for AI agent processes.
 //
 // Architecture:
 //
@@ -47,15 +47,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/consumer"
-	"github.com/ai-agent-monitor/internal/correlator"
-	"github.com/ai-agent-monitor/internal/detector"
-	"github.com/ai-agent-monitor/internal/graph"
-	"github.com/ai-agent-monitor/internal/graphapi"
-	"github.com/ai-agent-monitor/internal/loader"
-	"github.com/ai-agent-monitor/internal/nucleiscanner"
-	"github.com/ai-agent-monitor/internal/output"
-	"github.com/ai-agent-monitor/internal/provenance"
+	"github.com/clawsec/internal/consumer"
+	"github.com/clawsec/internal/correlator"
+	"github.com/clawsec/internal/detector"
+	"github.com/clawsec/internal/graph"
+	"github.com/clawsec/internal/graphapi"
+	"github.com/clawsec/internal/loader"
+	"github.com/clawsec/internal/nucleiscanner"
+	"github.com/clawsec/internal/output"
+	"github.com/clawsec/internal/provenance"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -83,7 +83,7 @@ func main() {
 	showVersion := false
 
 	flag.StringVar(&cfg.bpfObjPath, "bpf-obj", "",
-		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/ai-agent-monitor/)")
+		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/clawsec/)")
 	flag.StringVar(&cfg.templatesDir, "templates", "./templates",
 		"Directory containing YAML detection templates")
 	flag.StringVar(&cfg.nucleiTemplates, "nuclei-templates", "./nuclei-templates",
@@ -109,7 +109,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("ai-agent-monitor %s\n", Version)
+		fmt.Printf("clawsec %s\n", Version)
 		os.Exit(0)
 	}
 
@@ -174,7 +174,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	//   - every YAML template file (behavioral + nuclei)
 	//
 	// We resolve the binary path via os.Executable() so it works whether the
-	// user ran ./bin/monitor or /usr/local/bin/ai-agent-monitor.
+	// user ran ./bin/monitor or /usr/local/bin/clawsec.
 	protectedPaths := collectProtectedPaths(cfg, bpfPath, logger)
 	if err := objs.PopulateProtectionMaps(selfPID, protectedPaths, logger); err != nil {
 		// Non-fatal: log and continue.  LSM hooks will simply allow everything
@@ -379,7 +379,7 @@ func splitOutputPaths(path string) (logsPath, rulesPath string) {
 //  1. Explicit --bpf-obj flag value
 //  2. Same directory as the running binary (deployment default)
 //  3. bpf/monitor.bpf.o relative to CWD  (development / make run)
-//  4. /usr/lib/ai-agent-monitor/monitor.bpf.o  (installed via make install)
+//  4. /usr/lib/clawsec/monitor.bpf.o  (installed via make install)
 func findBPFObject(flagPath string) (string, error) {
 	candidates := []string{}
 
@@ -394,7 +394,7 @@ func findBPFObject(flagPath string) (string, error) {
 
 	candidates = append(candidates,
 		"bpf/monitor.bpf.o",
-		"/usr/lib/ai-agent-monitor/monitor.bpf.o",
+		"/usr/lib/clawsec/monitor.bpf.o",
 	)
 
 	for _, p := range candidates {

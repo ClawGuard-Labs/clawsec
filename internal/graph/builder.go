@@ -5,9 +5,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/constants"
-	"github.com/ai-agent-monitor/internal/consumer"
-	"github.com/ai-agent-monitor/internal/provenance"
+	"github.com/clawsec/internal/constants"
+	"github.com/clawsec/internal/consumer"
+	"github.com/clawsec/internal/provenance"
 )
 
 // Builder converts enriched events + taint information into graph mutations.

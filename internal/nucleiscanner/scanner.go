@@ -30,9 +30,9 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
-	"github.com/ai-agent-monitor/internal/constants"
-	"github.com/ai-agent-monitor/internal/consumer"
-	outpkg "github.com/ai-agent-monitor/internal/output"
+	"github.com/clawsec/internal/constants"
+	"github.com/clawsec/internal/consumer"
+	outpkg "github.com/clawsec/internal/output"
 )
 
 const (

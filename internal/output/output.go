@@ -47,7 +47,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/consumer"
+	"github.com/clawsec/internal/consumer"
 	"go.uber.org/zap"
 )
 
@@ -317,7 +317,7 @@ func sseConnect(rw http.ResponseWriter, r *http.Request, logger *zap.Logger) cha
 	rw.Header().Set("Connection", "keep-alive")
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, ": ai-agent-monitor stream connected\n\n")
+	fmt.Fprintf(rw, ": clawsec stream connected\n\n")
 	if f, ok := rw.(http.Flusher); ok {
 		f.Flush()
 	}

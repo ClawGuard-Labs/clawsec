@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/constants"
-	"github.com/ai-agent-monitor/internal/consumer"
-	"github.com/ai-agent-monitor/internal/correlator"
-	tmpl "github.com/ai-agent-monitor/internal/templates"
+	"github.com/clawsec/internal/constants"
+	"github.com/clawsec/internal/consumer"
+	"github.com/clawsec/internal/correlator"
+	tmpl "github.com/clawsec/internal/templates"
 )
 
 // Evaluate returns true if all (or any, depending on matchers-condition)

@@ -17,9 +17,9 @@ package detector
 import (
 	"fmt"
 
-	"github.com/ai-agent-monitor/internal/consumer"
-	"github.com/ai-agent-monitor/internal/correlator"
-	tmpl "github.com/ai-agent-monitor/internal/templates"
+	"github.com/clawsec/internal/consumer"
+	"github.com/clawsec/internal/correlator"
+	tmpl "github.com/clawsec/internal/templates"
 	"go.uber.org/zap"
 )
 

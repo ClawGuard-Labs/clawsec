@@ -1,4 +1,4 @@
-module github.com/ai-agent-monitor
+module github.com/clawsec
 
 go 1.24.2
 

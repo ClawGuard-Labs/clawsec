@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/consumer"
+	"github.com/clawsec/internal/consumer"
 )
 
 const (

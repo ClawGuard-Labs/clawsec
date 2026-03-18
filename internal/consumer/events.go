@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ai-agent-monitor/internal/constants"
+	"github.com/clawsec/internal/constants"
 )
 
 // ── Event-type constants (must match common.h) ────────────────────────────

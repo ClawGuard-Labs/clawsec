@@ -1,4 +1,4 @@
-# Contributing to AI Agent Monitor
+# Contributing to ClawSec
 
 Thank you for your interest in contributing. This document explains how to get set up, report issues, and submit changes.
 
@@ -24,10 +24,9 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 ### Build and run
 
 ```bash
-git clone https://github.com/clouddefense/agentic-security.git
-cd agentic-security
-make build
-sudo ./bin/monitor
+git clone https://github.com/ClawGuard-Labs/clawsec.git
+cd clawsec
+make install  
 ```
 
 See [README.md](README.md#quick-start) for full options and [Build Targets](README.md#build-targets).

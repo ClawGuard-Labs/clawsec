@@ -1,4 +1,4 @@
-# Makefile — ai_agent_monitor
+# Makefile — ClawSec
 #
 # Build pipeline:
 #   1. gen-vmlinux : generate bpf/vmlinux.h from running kernel BTF
@@ -242,7 +242,7 @@ distclean: clean
 # ── Help ─────────────────────────────────────────────────────────────────────
 .PHONY: help
 help:
-	@echo "ai_agent_monitor — eBPF AI Agent Monitoring Tool"
+	@echo "ClawSec — eBPF AI Agent Monitoring Tool"
 	@echo ""
 	@echo "Targets:"
 	@echo "  deps          Check all build and runtime dependencies"

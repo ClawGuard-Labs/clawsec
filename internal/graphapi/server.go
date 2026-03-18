@@ -22,7 +22,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/ai-agent-monitor/internal/graph"
+	"github.com/clawsec/internal/graph"
 )
 
 //go:embed static

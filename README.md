@@ -69,7 +69,7 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 
 ```bash
 # Clone and build
-git clone <repo>
+git clone https://github.com/ClawGuard-Labs/clawsec
 cd clawsec
 make build
 
