@@ -5,6 +5,7 @@
 //	GET  /api/graph         — full Snapshot (JSON)
 //	GET  /api/graph/events  — SSE stream of GraphDiff updates
 //	GET  /api/alerts        — all alerts so far (JSON)
+//	GET  /api/chains        — aggregated chain data (JSON, requires --compact)
 //	GET  /*                 — React SPA (embedded static files)
 //
 // The static/ subdirectory is populated by `make ui` (Vite build).
@@ -22,6 +23,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/clawsec/internal/chagg"
 	"github.com/clawsec/internal/graph"
 )
 
@@ -31,18 +33,21 @@ var staticFiles embed.FS
 // Server is the HTTP server for the graph dashboard.
 type Server struct {
 	g      *graph.Graph
+	agg    *chagg.Aggregator // nil when --compact is not enabled
 	logger *zap.Logger
 	srv    *http.Server
 }
 
 // New creates a Server bound to addr (e.g. ":9090") backed by g.
-func New(addr string, g *graph.Graph, logger *zap.Logger) *Server {
-	s := &Server{g: g, logger: logger}
+// agg may be nil when chain aggregation is disabled.
+func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger) *Server {
+	s := &Server{g: g, agg: agg, logger: logger}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/graph/events", s.handleSSE)
 	mux.HandleFunc("/api/graph", s.handleSnapshot)
 	mux.HandleFunc("/api/alerts", s.handleAlerts)
+	mux.HandleFunc("/api/chains", s.handleChains)
 
 	// Serve the embedded React SPA for all other paths.
 	// Fall back to index.html for client-side routing (SPA 404 → index.html).
@@ -163,6 +168,20 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+// handleChains serves the aggregated chain data as JSON.
+// Returns an empty array when chain aggregation is not enabled.
+func (s *Server) handleChains(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if s.agg == nil {
+		writeJSON(w, []struct{}{})
+		return
+	}
+	writeJSON(w, s.agg.Snapshot())
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

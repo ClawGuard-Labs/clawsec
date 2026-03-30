@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useCallback } from 'react'
 
 // ── Session builder ───────────────────────────────────────────────────────────
 // Groups flat node/alert maps into per-session summary objects.
@@ -137,7 +137,7 @@ function MiniGraph({ session }) {
 
 // ── SessionCard ───────────────────────────────────────────────────────────────
 
-function SessionCard({ session, isHighlighted, onClick }) {
+const SessionCard = React.memo(function SessionCard({ session, isHighlighted, onSelect }) {
   const cls = [
     'session-card',
     session.isTainted  ? 'sc-tainted' : '',
@@ -145,8 +145,10 @@ function SessionCard({ session, isHighlighted, onClick }) {
     isHighlighted      ? 'sc-highlighted' : '',
   ].filter(Boolean).join(' ')
 
+  const handleClick = useCallback(() => onSelect(session.id), [onSelect, session.id])
+
   return (
-    <div className={cls} onClick={onClick}>
+    <div className={cls} onClick={handleClick}>
       <div className="sc-header">
         <span className="sc-session-id">{session.id}</span>
         {session.maxRiskScore > 0 && (
@@ -199,11 +201,11 @@ function SessionCard({ session, isHighlighted, onClick }) {
       <div className="sc-hover-overlay">Click to explore →</div>
     </div>
   )
-}
+})
 
 // ── SessionGrid ───────────────────────────────────────────────────────────────
 
-export function SessionGrid({ nodes, alerts, highlightedSessionId, onSessionSelect }) {
+export const SessionGrid = React.memo(function SessionGrid({ nodes, alerts, highlightedSessionId, onSessionSelect }) {
   const sessions = useMemo(
     () => buildSessions(nodes, alerts),
     [nodes, alerts]
@@ -232,7 +234,7 @@ export function SessionGrid({ nodes, alerts, highlightedSessionId, onSessionSele
                 key={sess.id}
                 session={sess}
                 isHighlighted={sess.id === highlightedSessionId}
-                onClick={() => onSessionSelect(sess.id)}
+                onSelect={onSessionSelect}
               />
             ))}
           </div>
@@ -240,4 +242,4 @@ export function SessionGrid({ nodes, alerts, highlightedSessionId, onSessionSele
       )}
     </div>
   )
-}
+})

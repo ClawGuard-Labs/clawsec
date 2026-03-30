@@ -22,6 +22,8 @@ function shortPath(path) {
 function nodeLabel(n) {
   if (n.type === 'file')    return shortPath(n.label)
   if (n.type === 'network') return n.label
+  const count = n.meta?.count
+  if (count > 1) return n.label + ` (x${count})`
   return n.label + (n.meta?.pid ? `\n(${n.meta.pid})` : '')
 }
 
@@ -169,7 +171,7 @@ function smoothZoom(cy, factor) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBack }) {
+export const GraphView = React.memo(function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBack }) {
   const containerRef  = useRef(null)
   const cyRef         = useRef(null)
   const pendingLayout = useRef(false)
@@ -339,7 +341,38 @@ export function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBa
     }
   }, [syncCanvasSize]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync nodes & edges into Cytoscape
+  // Debounced layout: waits 500ms after the last element change before running
+  // dagre, so rapid SSE bursts produce a single layout instead of dozens.
+  const layoutTimer = useRef(null)
+
+  const scheduleLayout = useCallback(() => {
+    if (layoutTimer.current) clearTimeout(layoutTimer.current)
+    layoutTimer.current = setTimeout(() => {
+      layoutTimer.current = null
+      const cy = cyRef.current
+      if (!cy || !pendingLayout.current) return
+      pendingLayout.current = false
+
+      if (!hasInitialFit.current) {
+        hasInitialFit.current = true
+        const layout = cy.layout(LAYOUT_BASE)
+        layout.on('layoutstop', () => {
+          cy.animate(
+            { fit: { eles: cy.elements(), padding: 50 } },
+            { duration: 250, complete: syncCanvasSize },
+          )
+        })
+        layout.run()
+      } else {
+        const layout = cy.layout(LAYOUT_BASE)
+        layout.on('layoutstop', syncCanvasSize)
+        layout.run()
+      }
+    }, 500)
+  }, [syncCanvasSize])
+
+  // Sync nodes & edges into Cytoscape (element add/remove/update only;
+  // the expensive dagre layout is debounced separately).
   const syncGraph = useCallback(() => {
     const cy = cyRef.current
     if (!cy) return
@@ -358,6 +391,7 @@ export function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBa
           tags: n.tags,
           last_seen: n.last_seen,
           meta: n.meta,
+          shortLabel: nodeLabel(n),
         })
       }
     }
@@ -371,32 +405,36 @@ export function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBa
       }
     }
 
+    // Remove nodes/edges no longer in state (compaction removed them)
+    const nodeIdsInState = new Set(Object.keys(nodes))
+    const edgeIdsInState = new Set(Object.keys(edges))
+    let removedAny = false
+
+    for (const id of existingNodes) {
+      if (!nodeIdsInState.has(id)) {
+        cy.getElementById(id).remove()
+        removedAny = true
+      }
+    }
+    for (const id of existingEdges) {
+      if (!edgeIdsInState.has(id)) {
+        cy.getElementById(id).remove()
+      }
+    }
+    if (removedAny) pendingLayout.current = true
+
     if (toAdd.length > 0) {
       cy.add(toAdd)
       pendingLayout.current = true
     }
 
-    if (pendingLayout.current) {
-      pendingLayout.current = false
-      if (!hasInitialFit.current) {
-        hasInitialFit.current = true
-        const layout = cy.layout(LAYOUT_BASE)
-        layout.on('layoutstop', () => {
-          cy.animate(
-            { fit: { eles: cy.elements(), padding: 50 } },
-            { duration: 250, complete: syncCanvasSize },
-          )
-        })
-        layout.run()
-      } else {
-        const layout = cy.layout(LAYOUT_BASE)
-        layout.on('layoutstop', syncCanvasSize)
-        layout.run()
-      }
-    }
-  }, [nodes, edges, syncCanvasSize])
+    if (pendingLayout.current) scheduleLayout()
+  }, [nodes, edges, scheduleLayout])
 
   useEffect(() => { syncGraph() }, [syncGraph])
+
+  // Clean up layout timer on unmount
+  useEffect(() => () => { if (layoutTimer.current) clearTimeout(layoutTimer.current) }, [])
 
   // Highlight nodes linked to the selected alert
   useEffect(() => {
@@ -456,4 +494,4 @@ export function GraphView({ nodes, edges, highlightedNodeIds, onNodeSelect, onBa
       )}
     </div>
   )
-}
+})

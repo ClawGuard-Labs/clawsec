@@ -15,7 +15,9 @@ ExecStart=/usr/local/bin/clawsec \
     --templates /etc/clawsec/templates \
     --nuclei-templates /etc/clawsec/nuclei-templates \
     --log-level info \
-    --output    /var/log/clawsec/events.json
+    --output    /var/log/clawsec/events.json \
+    --compact \
+    --compact-log /var/log/clawsec/chains.json
 
 
 # View live: journalctl -u clawsec -f

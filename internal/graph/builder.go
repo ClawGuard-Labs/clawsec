@@ -1,25 +1,59 @@
 package graph
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/clawsec/internal/chagg"
 	"github.com/clawsec/internal/constants"
 	"github.com/clawsec/internal/consumer"
 	"github.com/clawsec/internal/provenance"
 )
 
+// liveChain tracks a spawned-edge path from a parent for chain-wise compaction.
+type liveChain struct {
+	parentID string   // graph node ID the chain hangs off
+	nodeIDs  []string // ordered: child, grandchild, …, leaf
+	comms    []string
+	cmdlines []string
+	lastEdge time.Time
+	count    int
+	removed  bool
+}
+
 // Builder converts enriched events + taint information into graph mutations.
 // Create one Builder per Graph.
 type Builder struct {
 	g       *Graph
+	chagg   *chagg.Aggregator
 	alertID uint64 // atomically incremented
+
+	compact      bool
+	compactIdle  time.Duration
+	chains       []*liveChain
+	leafToChain  map[string]*liveChain
+	parentChains map[string][]*liveChain
 }
 
 // NewBuilder returns a Builder wired to g.
-func NewBuilder(g *Graph) *Builder {
-	return &Builder{g: g}
+// agg may be nil when chain aggregation is disabled.
+// When compact is true, the builder tracks spawned-edge chains and periodically
+// merges identical chains from the same parent, removing duplicates from the graph.
+func NewBuilder(g *Graph, agg *chagg.Aggregator, compact bool, compactIdle time.Duration) *Builder {
+	b := &Builder{
+		g:           g,
+		chagg:       agg,
+		compact:     compact,
+		compactIdle: compactIdle,
+	}
+	if compact {
+		b.leafToChain = make(map[string]*liveChain)
+		b.parentChains = make(map[string][]*liveChain)
+	}
+	return b
 }
 
 // Process inspects ev and taint and applies the resulting graph mutations.
@@ -100,6 +134,12 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 		if e, isNew := b.g.ensureEdge(parentID, procID, EdgeSpawned, taint.IsTainted, now); isNew {
 			diff.AddedEdges = append(diff.AddedEdges, e)
 		}
+		if b.chagg != nil {
+			b.chagg.TrackEdge(procID, ev.ParentComm, ev.Comm, ev.Cmdline, ev.Pid, ev.Uid, ev.AISessionID, string(EdgeSpawned), ev.Comm)
+		}
+		if b.compact {
+			b.trackSpawnedEdge(parentID, procID, ev.Comm, ev.Cmdline, now)
+		}
 	}
 
 	// ── File node + read / write edges ────────────────────────────────────
@@ -132,6 +172,9 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 			if e, isNew := b.g.ensureEdge(procID, fileID, edgeType, taint.IsTainted, now); isNew {
 				diff.AddedEdges = append(diff.AddedEdges, e)
 			}
+			if b.chagg != nil {
+				b.chagg.TrackEdge(procID, ev.ParentComm, ev.Comm, ev.Cmdline, ev.Pid, ev.Uid, ev.AISessionID, string(edgeType), ev.FilePath)
+			}
 
 			// If the file was downloaded from the network, add a network→file edge.
 			if fileTainted && taint.SourceIP != "" {
@@ -146,6 +189,9 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 				}
 				if e, isNew := b.g.ensureEdge(netID, fileID, EdgeSourced, true, now); isNew {
 					diff.AddedEdges = append(diff.AddedEdges, e)
+				}
+				if b.chagg != nil {
+					b.chagg.TrackEdge(procID, ev.ParentComm, ev.Comm, ev.Cmdline, ev.Pid, ev.Uid, ev.AISessionID, string(EdgeSourced), ev.FilePath)
 				}
 			}
 		}
@@ -164,6 +210,9 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 		}
 		if e, isNew := b.g.ensureEdge(procID, netID, EdgeConnected, taint.IsTainted, now); isNew {
 			diff.AddedEdges = append(diff.AddedEdges, e)
+		}
+		if b.chagg != nil {
+			b.chagg.TrackEdge(procID, ev.ParentComm, ev.Comm, ev.Cmdline, ev.Pid, ev.Uid, ev.AISessionID, string(EdgeConnected), netLabel)
 		}
 	}
 
@@ -220,3 +269,178 @@ func (b *Builder) newAlert(severity string, riskScore int, title, detail string,
 	}
 }
 
+// ── Chain-wise compaction ────────────────────────────────────────────────────
+
+// trackSpawnedEdge records a spawned edge for chain compaction.
+// Caller must hold b.g.mu.
+func (b *Builder) trackSpawnedEdge(parentID, procID, comm, cmdline string, now time.Time) {
+	if chain, ok := b.leafToChain[parentID]; ok {
+		delete(b.leafToChain, parentID)
+		chain.nodeIDs = append(chain.nodeIDs, procID)
+		chain.comms = append(chain.comms, comm)
+		chain.cmdlines = append(chain.cmdlines, cmdline)
+		chain.lastEdge = now
+		chain.count = 1 // reset — signature changed due to extension
+		b.leafToChain[procID] = chain
+	} else {
+		chain := &liveChain{
+			parentID: parentID,
+			nodeIDs:  []string{procID},
+			comms:    []string{comm},
+			cmdlines: []string{cmdline},
+			lastEdge: now,
+			count:    1,
+		}
+		b.chains = append(b.chains, chain)
+		b.leafToChain[procID] = chain
+		b.parentChains[parentID] = append(b.parentChains[parentID], chain)
+	}
+}
+
+func chainSignature(c *liveChain) string {
+	var sb strings.Builder
+	for i := range c.comms {
+		if i > 0 {
+			sb.WriteByte('|')
+		}
+		sb.WriteString(c.comms[i])
+		sb.WriteByte(':')
+		sb.WriteString(c.cmdlines[i])
+	}
+	return sb.String()
+}
+
+func foldEarliest(a, b time.Time) time.Time {
+	if a.IsZero() {
+		return b
+	}
+	if b.IsZero() {
+		return a
+	}
+	if b.Before(a) {
+		return b
+	}
+	return a
+}
+
+func foldLatest(a, b time.Time) time.Time {
+	if a.IsZero() {
+		return b
+	}
+	if b.IsZero() {
+		return a
+	}
+	if b.After(a) {
+		return b
+	}
+	return a
+}
+
+// StartCompaction runs a background goroutine that periodically sweeps idle
+// chains and merges identical ones. Call when --compact is enabled.
+func (b *Builder) StartCompaction(ctx context.Context) {
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			b.sweepChains()
+		}
+	}
+}
+
+func (b *Builder) sweepChains() {
+	if !b.compact {
+		return
+	}
+
+	cutoff := time.Now().Add(-b.compactIdle)
+
+	b.g.mu.Lock()
+
+	type gk struct{ parentID, sig string }
+	groups := map[gk][]*liveChain{}
+
+	for _, c := range b.chains {
+		if c.removed || c.lastEdge.After(cutoff) {
+			continue
+		}
+		sig := chainSignature(c)
+		key := gk{c.parentID, sig}
+		groups[key] = append(groups[key], c)
+	}
+
+	diff := GraphDiff{}
+
+	for _, chains := range groups {
+		if len(chains) < 2 {
+			continue
+		}
+
+		surviving := chains[0]
+		totalCount := 0
+		for _, c := range chains {
+			totalCount += c.count
+		}
+		surviving.count = totalCount
+
+		for i, nodeID := range surviving.nodeIDs {
+			var minFirst, maxLast time.Time
+			for _, ch := range chains {
+				if i >= len(ch.nodeIDs) {
+					continue
+				}
+				n := b.g.nodes[ch.nodeIDs[i]]
+				if n == nil {
+					continue
+				}
+				minFirst = foldEarliest(minFirst, n.FirstSeen)
+				maxLast = foldLatest(maxLast, n.LastSeen)
+			}
+			b.g.setNodeSeenRange(nodeID, minFirst, maxLast)
+			if cp := b.g.setNodeMeta(nodeID, "count", totalCount); cp != nil {
+				diff.UpdatedNodes = append(diff.UpdatedNodes, cp)
+			}
+		}
+
+		for i := 1; i < len(chains); i++ {
+			dup := chains[i]
+			for _, nodeID := range dup.nodeIDs {
+				removedEdges := b.g.removeNode(nodeID)
+				diff.RemovedNodeIDs = append(diff.RemovedNodeIDs, nodeID)
+				diff.RemovedEdgeIDs = append(diff.RemovedEdgeIDs, removedEdges...)
+				delete(b.leafToChain, nodeID)
+			}
+			dup.removed = true
+		}
+	}
+	alive := b.chains[:0]
+	for _, c := range b.chains {
+		if !c.removed {
+			alive = append(alive, c)
+		}
+	}
+	b.chains = alive
+
+	for pid, pchains := range b.parentChains {
+		ap := pchains[:0]
+		for _, c := range pchains {
+			if !c.removed {
+				ap = append(ap, c)
+			}
+		}
+		if len(ap) == 0 {
+			delete(b.parentChains, pid)
+		} else {
+			b.parentChains[pid] = ap
+		}
+	}
+
+	b.g.mu.Unlock()
+
+	if !diff.IsEmpty() {
+		b.g.broadcast(diff)
+	}
+}

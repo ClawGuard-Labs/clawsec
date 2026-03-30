@@ -214,6 +214,14 @@ enable:
 disable:
 	sudo systemctl disable --now $(SVC_NAME)
 
+# ── Test ─────────────────────────────────────────────────────────────────────
+# Runs template detection unit tests. Detailed logs go to tests/logs/*.log.
+.PHONY: test
+test:
+	@echo "==> Running template detection tests..."
+	cd tests && $(GO) test ./...
+	@echo "==> Detailed logs: tests/logs/"
+
 # ── Format ───────────────────────────────────────────────────────────────────
 .PHONY: fmt
 fmt:
@@ -257,6 +265,7 @@ help:
 	@echo "  uninstall     Stop, disable, and remove all installed files"
 	@echo "  enable        systemctl enable --now clawsec"
 	@echo "  disable       systemctl disable --now clawsec"
+	@echo "  test          Run template detection tests (logs in tests/logs/)"
 	@echo "  fmt           Format Go and C source files"
 	@echo "  clean         Remove build artifacts"
 	@echo "  distclean     Remove all generated files including vmlinux.h"

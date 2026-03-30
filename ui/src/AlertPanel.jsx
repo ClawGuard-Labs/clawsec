@@ -37,7 +37,7 @@ function sortedAlerts(alerts) {
   })
 }
 
-export function AlertPanel({ alerts, selectedAlert, onSelect }) {
+export const AlertPanel = React.memo(function AlertPanel({ alerts, selectedAlert, onSelect }) {
   const [activeSevs, setActiveSevs] = useState(() => new Set(ALL_SEVS))
   const [minScore,   setMinScore]   = useState(0)
   const [timeRange,  setTimeRange]  = useState('all')
@@ -144,4 +144,4 @@ export function AlertPanel({ alerts, selectedAlert, onSelect }) {
       </div>
     </div>
   )
-}
+})

@@ -47,6 +47,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/clawsec/internal/chagg"
 	"github.com/clawsec/internal/consumer"
 	"github.com/clawsec/internal/correlator"
 	"github.com/clawsec/internal/detector"
@@ -76,6 +77,9 @@ type config struct {
 	noTLS           bool
 	grouped         bool
 	groupTimeout    time.Duration
+	compact         bool
+	compactLog      string
+	compactIdle     time.Duration
 }
 
 func main() {
@@ -104,6 +108,12 @@ func main() {
 		"Buffer events by session and flush as one JSON block per (parent_comm, ppid) chain after idle")
 	flag.DurationVar(&cfg.groupTimeout, "group-timeout", 500*time.Millisecond,
 		"Idle time after which a session group is flushed (only with --grouped)")
+	flag.BoolVar(&cfg.compact, "compact", false,
+		"Enable chain aggregation (compact repeated edge patterns into counted chains)")
+	flag.StringVar(&cfg.compactLog, "compact-log", "",
+		"Path for compact chain log file (requires --compact)")
+	flag.DurationVar(&cfg.compactIdle, "compact-idle", 30*time.Second,
+		"Idle window before finalizing a process chain")
 	flag.BoolVar(&showVersion, "version", false,
 		"Print version and exit")
 	flag.Parse()
@@ -259,10 +269,28 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	// ── 10. Provenance tracker + graph ───────────────────────────────────
 	tracker := provenance.New()
 	g := graph.New()
-	builder := graph.NewBuilder(g)
+
+	var agg *chagg.Aggregator
+	if cfg.compact {
+		agg = chagg.New(cfg.compactIdle)
+		go agg.Start(ctx)
+		logger.Info("chain aggregation enabled",
+			zap.Duration("idle_window", cfg.compactIdle))
+
+		if cfg.compactLog != "" {
+			cw := chagg.NewWriter(agg, cfg.compactLog)
+			go cw.Start(ctx)
+			logger.Info("compact chain log", zap.String("path", cfg.compactLog))
+		}
+	}
+
+	builder := graph.NewBuilder(g, agg, cfg.compact, cfg.compactIdle)
+	if cfg.compact {
+		go builder.StartCompaction(ctx)
+	}
 
 	if cfg.uiAddr != "" {
-		uiServer := graphapi.New(cfg.uiAddr, g, logger)
+		uiServer := graphapi.New(cfg.uiAddr, g, agg, logger)
 		go uiServer.Start(ctx)
 	} else {
 		logger.Info("graph dashboard disabled (enable with --ui :<port>)")

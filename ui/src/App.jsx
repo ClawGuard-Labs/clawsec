@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import './App.css'
 import { useGraphSSE }   from './useGraphSSE'
 import { AlertPanel }    from './AlertPanel'
@@ -47,39 +47,38 @@ export default function App() {
   const [selectedSession,     setSelectedSession]     = useState(null)  // null = grid view
 
   // ── Alert selection ────────────────────────────────────────────────────────
-  function handleAlertSelect(alert) {
+  const handleAlertSelect = useCallback((alert) => {
     setSelectedAlert(alert)
     setSelectedNode(null)
     setHighlightedNodeIds(alert?.node_ids ?? [])
 
-    // Auto drill-down into the session that owns this alert
     if (alert?.session_id) {
       setSelectedSession(alert.session_id)
     }
-  }
+  }, [])
 
   // ── Node selection (inside drill-down graph) ──────────────────────────────
-  function handleNodeSelect(nodeData) {
+  const handleNodeSelect = useCallback((nodeData) => {
     setSelectedNode(nodeData)
     setSelectedAlert(null)
     setHighlightedNodeIds([])
-  }
+  }, [])
 
   // ── Session card click → drill in ─────────────────────────────────────────
-  function handleSessionSelect(sessionId) {
+  const handleSessionSelect = useCallback((sessionId) => {
     setSelectedSession(sessionId)
     setSelectedNode(null)
     setSelectedAlert(null)
     setHighlightedNodeIds([])
-  }
+  }, [])
 
   // ── Back button in graph view → return to grid ────────────────────────────
-  function handleBack() {
+  const handleBack = useCallback(() => {
     setSelectedSession(null)
     setSelectedNode(null)
     setSelectedAlert(null)
     setHighlightedNodeIds([])
-  }
+  }, [])
 
   // ── Compute filtered graph for the selected session ────────────────────────
   const { filteredNodes, filteredEdges } = useMemo(() => {

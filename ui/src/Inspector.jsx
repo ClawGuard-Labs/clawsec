@@ -15,7 +15,7 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleString()
 }
 
-export function Inspector({ node, alert }) {
+export const Inspector = React.memo(function Inspector({ node, alert }) {
   if (alert && !node) {
     return (
       <div className="inspector-panel">
@@ -60,6 +60,7 @@ export function Inspector({ node, alert }) {
           {node.is_tainted && <div className="inspector-section"><span className="tainted-badge">TAINTED</span></div>}
           <Row label="ID"       value={node.id} />
           <Row label="Label"    value={node.label} />
+          {node.meta?.count > 1 && <Row label="Occurrences" value={node.meta.count} />}
           <Row label="Session"  value={node.session_id} />
           <Row label="Risk Score" value={node.risk_score > 0 ? node.risk_score : undefined} />
           <Row label="First Seen" value={fmtTime(node.first_seen)} />
@@ -98,4 +99,4 @@ export function Inspector({ node, alert }) {
       </div>
     </div>
   )
-}
+})

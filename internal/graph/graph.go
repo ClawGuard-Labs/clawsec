@@ -91,16 +91,19 @@ type Alert struct {
 // GraphDiff is the incremental update streamed to UI subscribers via SSE.
 // Each field is omitted from JSON when empty to keep the wire payload small.
 type GraphDiff struct {
-	AddedNodes   []*Node  `json:"added_nodes,omitempty"`
-	UpdatedNodes []*Node  `json:"updated_nodes,omitempty"`
-	AddedEdges   []*Edge  `json:"added_edges,omitempty"`
-	Alerts       []*Alert `json:"alerts,omitempty"`
+	AddedNodes     []*Node  `json:"added_nodes,omitempty"`
+	UpdatedNodes   []*Node  `json:"updated_nodes,omitempty"`
+	AddedEdges     []*Edge  `json:"added_edges,omitempty"`
+	RemovedNodeIDs []string `json:"removed_node_ids,omitempty"`
+	RemovedEdgeIDs []string `json:"removed_edge_ids,omitempty"`
+	Alerts         []*Alert `json:"alerts,omitempty"`
 }
 
 // IsEmpty reports whether the diff carries no changes.
 func (d *GraphDiff) IsEmpty() bool {
 	return len(d.AddedNodes) == 0 && len(d.UpdatedNodes) == 0 &&
-		len(d.AddedEdges) == 0 && len(d.Alerts) == 0
+		len(d.AddedEdges) == 0 && len(d.RemovedNodeIDs) == 0 &&
+		len(d.RemovedEdgeIDs) == 0 && len(d.Alerts) == 0
 }
 
 // Snapshot is a full graph export returned by the REST endpoint GET /api/graph.
@@ -277,6 +280,51 @@ func (g *Graph) ensureEdge(src, dst string, typ EdgeType, tainted bool, at time.
 	g.edges[id] = e
 	cp := *e
 	return &cp, true
+}
+
+// removeNode deletes a node and all edges that reference it.
+// Returns the IDs of removed edges. Caller must hold g.mu write lock.
+func (g *Graph) removeNode(id string) []string {
+	delete(g.nodes, id)
+	var removed []string
+	for eid, e := range g.edges {
+		if e.Src == id || e.Dst == id {
+			delete(g.edges, eid)
+			removed = append(removed, eid)
+		}
+	}
+	return removed
+}
+
+// setNodeMeta overwrites a meta key on an existing node and returns a copy.
+// Returns nil if the node does not exist. Caller must hold g.mu write lock.
+func (g *Graph) setNodeMeta(id, key string, val interface{}) *Node {
+	n, ok := g.nodes[id]
+	if !ok {
+		return nil
+	}
+	if n.Meta == nil {
+		n.Meta = make(map[string]interface{})
+	}
+	n.Meta[key] = val
+	cp := *n
+	return &cp
+}
+
+// setNodeSeenRange sets FirstSeen and LastSeen from aggregated bounds (min first,
+// max last) after chain compaction. Zero values leave that field unchanged.
+// Caller must hold g.mu write lock.
+func (g *Graph) setNodeSeenRange(id string, first, last time.Time) {
+	n, ok := g.nodes[id]
+	if !ok {
+		return
+	}
+	if !first.IsZero() {
+		n.FirstSeen = first
+	}
+	if !last.IsZero() {
+		n.LastSeen = last
+	}
 }
 
 // storeAlert appends an alert to g.alerts. Caller holds g.mu.
