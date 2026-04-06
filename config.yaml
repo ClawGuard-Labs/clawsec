@@ -1,0 +1,92 @@
+
+ai:
+  services:
+    - port: 6333
+      name: qdrant
+      category: vector-db
+    - port: 6334
+      name: qdrant-grpc
+      category: vector-db
+    - port: 8000
+      name: chromadb
+      category: vector-db
+    - port: 8080
+      name: weaviate
+      category: vector-db
+    - port: 19530
+      name: milvus
+      category: vector-db
+    - port: 9200
+      name: elasticsearch
+      category: vector-db
+    - port: 11434
+      name: ollama
+      category: llm
+    - port: 8001
+      name: vllm
+      category: llm
+    - port: 7860
+      name: gradio
+      category: ui
+    - port: 8501
+      name: streamlit
+      category: ui
+    - port: 3000
+      name: localai
+      category: llm
+
+  model_extensions:
+    - .pt
+    - .pth
+    - .bin
+    - .gguf
+    - .safetensors
+    - .onnx
+    - .pkl
+    - .npz
+    - .npy
+    - .h5
+    - .pb
+    - .ckpt
+    - .weights
+    - .model
+    - .tflite
+
+  processes:
+    - name: python
+      category: runtime
+    - name: python3
+      category: runtime
+    - name: python3.10
+      category: runtime
+    - name: python3.11
+      category: runtime
+    - name: python3.12
+      category: runtime
+    - name: ollama
+      category: llm
+    - name: llama
+      category: llm
+    - name: llama-server
+      category: llm
+    - name: llama.cpp
+      category: llm
+    - name: torchrun
+      category: training
+    - name: accelerate
+      category: training
+    - name: vllm
+      category: llm
+    - name: tritonserver
+      category: llm
+    - name: node
+      category: runtime
+    - name: nodejs
+      category: runtime
+    - name: deno
+      category: runtime
+    - name: cargo
+    - name: rust-ai
+
+  default_process_category: other
+  default_service_category: inference

@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/clawsec/internal/constants"
 )
 
 type AIServiceInfo struct {
@@ -29,24 +27,17 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var results []AIServiceInfo
-
-	// scanning /proc 
-	results = append(results, scanAIProcesses()...)
-
-	// ports checking
-	results = append(results, probeAIServicePorts()...)
-
+	results = append(results, s.scanAIProcesses()...)
+	results = append(results, s.probeAIServicePorts()...)
 	writeJSON(w, results)
 }
 
-func scanAIProcesses() []AIServiceInfo {
+func (s *Server) scanAIProcesses() []AIServiceInfo {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return nil
 	}
 
-	// Deduplicate by comm to avoid listing 50 python3 workers individually.
-	// Track unique comms with their first-seen PID and total count.
 	type commInfo struct {
 		comm    string
 		pid     uint32
@@ -70,7 +61,7 @@ func scanAIProcesses() []AIServiceInfo {
 		}
 		comm := strings.TrimSpace(string(commBytes))
 
-		if _, ok := constants.AIProcessNames[comm]; !ok {
+		if !s.cfg.IsAIProcessComm(comm) {
 			continue
 		}
 
@@ -98,7 +89,7 @@ func scanAIProcesses() []AIServiceInfo {
 		results = append(results, AIServiceInfo{
 			Type:     "process",
 			Name:     name,
-			Category: categorizeProcess(info.comm),
+			Category: s.cfg.CategorizeProcess(info.comm),
 			PID:      info.pid,
 			Status:   "running",
 			Cmdline:  info.cmdline,
@@ -107,9 +98,9 @@ func scanAIProcesses() []AIServiceInfo {
 	return results
 }
 
-func probeAIServicePorts() []AIServiceInfo {
+func (s *Server) probeAIServicePorts() []AIServiceInfo {
 	var results []AIServiceInfo
-	for port, name := range constants.AIServicePorts {
+	for port, name := range s.cfg.ServicePorts() {
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
 		if err != nil {
@@ -119,7 +110,7 @@ func probeAIServicePorts() []AIServiceInfo {
 		results = append(results, AIServiceInfo{
 			Type:     "service",
 			Name:     name,
-			Category: categorizeService(name),
+			Category: s.cfg.CategorizeService(name),
 			Port:     port,
 			Status:   "listening",
 		})
@@ -132,38 +123,10 @@ func readCmdline(pidStr string) string {
 	if err != nil || len(data) == 0 {
 		return ""
 	}
-	// cmdline is null-separated; convert to spaces and truncate 
 	s := strings.ReplaceAll(string(data), "\x00", " ")
 	s = strings.TrimSpace(s)
 	if len(s) > 200 {
 		s = s[:200] + "..."
 	}
 	return s
-}
-
-func categorizeProcess(comm string) string {
-	switch comm {
-	case "ollama", "llama", "llama-server", "llama.cpp", "vllm", "tritonserver":
-		return "llm"
-	case "torchrun", "accelerate":
-		return "training"
-	case "python", "python3", "python3.10", "python3.11", "python3.12",
-		"node", "nodejs", "deno":
-		return "agent"
-	default:
-		return "other"
-	}
-}
-
-func categorizeService(name string) string {
-	switch name {
-	case "ollama", "vllm", "localai":
-		return "llm"
-	case "qdrant", "qdrant-grpc", "chromadb", "weaviate", "milvus", "elasticsearch":
-		return "vector-db"
-	case "gradio", "streamlit":
-		return "ui"
-	default:
-		return "inference"
-	}
 }

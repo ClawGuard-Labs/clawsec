@@ -6,7 +6,7 @@ const POLL_INTERVAL = 10_000 // refresh every 10 seconds
 function categoryColor(cat) {
   switch (cat) {
     case 'llm':       return 'var(--orange)'
-    case 'agent':     return 'var(--blue)'
+    case 'runtime':   return 'var(--blue)'
     case 'training':  return 'var(--yellow)'
     case 'vector-db': return 'var(--green)'
     case 'ui':        return '#c084fc'
@@ -18,7 +18,7 @@ function categoryColor(cat) {
 function categoryLabel(cat) {
   switch (cat) {
     case 'llm':       return 'LLM'
-    case 'agent':     return 'Runtime'
+    case 'runtime':   return 'Runtime'
     case 'training':  return 'Training'
     case 'vector-db': return 'Vector DB'
     case 'ui':        return 'UI'

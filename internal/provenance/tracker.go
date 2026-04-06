@@ -42,6 +42,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/clawsec/internal/aiprofile"
 	"github.com/clawsec/internal/constants"
 	"github.com/clawsec/internal/consumer"
 )
@@ -126,14 +127,16 @@ type Tracker struct {
 	// pendingConnects: pid → most-recent external net_connect.
 	// Cleared when the PID becomes tainted or after downloadCorrelationWindow.
 	pendingConnects map[uint32]*pendingConnect
+	cfg             *aiprofile.Profile
 }
 
-// New returns a ready Tracker.
-func New() *Tracker {
+// New returns a ready Tracker. cfg is the loaded config.yaml profile.
+func New(cfg *aiprofile.Profile) *Tracker {
 	return &Tracker{
 		files:           make(map[string]*FileRecord),
 		taintedPIDs:     make(map[uint32]*taintedEntry),
 		pendingConnects: make(map[uint32]*pendingConnect),
+		cfg:             cfg,
 	}
 }
 
@@ -188,7 +191,7 @@ func (t *Tracker) handleNetConnect(ev *consumer.EnrichedEvent) TaintInfo {
 	ip, port := ev.Network.DstIP, ev.Network.DstPort
 
 	// Skip localhost and known AI-service ports — not a suspicious download.
-	_, knownPort := constants.AIServicePorts[port]
+	_, knownPort := t.cfg.ServiceNameForPort(port)
 	if constants.IsLocalhost(ip) || knownPort {
 		return t.existingTaint(ev.Pid)
 	}
@@ -208,7 +211,7 @@ func (t *Tracker) handleFileOpen(ev *consumer.EnrichedEvent) TaintInfo {
 	// ── Case 1: write-open after pending connect → potential model download ──
 	if constants.IsWriteOpen(ev.FileFlags) {
 		if pc, ok := t.pendingConnects[ev.Pid]; ok {
-			if ev.Timestamp.Sub(pc.At) <= downloadCorrelationWindow && hasModelExt(ev.FilePath) {
+			if ev.Timestamp.Sub(pc.At) <= downloadCorrelationWindow && t.hasModelExt(ev.FilePath) {
 				// Confirm: this file is being written after an external connection.
 				if _, exists := t.files[ev.FilePath]; !exists {
 					t.files[ev.FilePath] = &FileRecord{
@@ -328,7 +331,6 @@ func (t *Tracker) expirePendingConnects() {
 	}
 }
 
-func hasModelExt(path string) bool {
-	_, ok := constants.ModelExtensions[constants.FileExt(path)]
-	return ok
+func (t *Tracker) hasModelExt(path string) bool {
+	return t.cfg.IsModelExtension(constants.FileExt(path))
 }

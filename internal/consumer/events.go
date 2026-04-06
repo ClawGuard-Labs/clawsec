@@ -25,8 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/clawsec/internal/constants"
+	"github.com/clawsec/internal/aiprofile"
 )
 
 // ── Event-type constants (must match common.h) ────────────────────────────
@@ -205,7 +204,7 @@ type EnrichedEvent struct {
 // Decode turns raw ring-buffer bytes into an EnrichedEvent.
 // It peeks at the event_type field (offset 32 in MonHdr) to determine
 // which struct to decode into.
-func Decode(raw []byte) (*EnrichedEvent, error) {
+func Decode(raw []byte, cfg *aiprofile.Profile) (*EnrichedEvent, error) {
 	if len(raw) < 33 {
 		return nil, fmt.Errorf("raw event too short: %d bytes", len(raw))
 	}
@@ -215,9 +214,9 @@ func Decode(raw []byte) (*EnrichedEvent, error) {
 
 	switch eventType {
 	case EventExec:
-		return decodeExec(raw)
+		return decodeExec(raw, cfg)
 	case EventFileOpen, EventFileRW, EventFileUnlink, EventFileMmap:
-		return decodeFile(raw, eventType)
+		return decodeFile(raw, eventType, cfg)
 	case EventNetConnect, EventNetSend:
 		return decodeNet(raw, eventType)
 	case EventTLSSend, EventTLSRecv:
@@ -227,7 +226,7 @@ func Decode(raw []byte) (*EnrichedEvent, error) {
 	}
 }
 
-func decodeExec(raw []byte) (*EnrichedEvent, error) {
+func decodeExec(raw []byte, cfg *aiprofile.Profile) (*EnrichedEvent, error) {
 	var ev BPFExecEvent
 	if err := binary.Read(bytes.NewReader(raw), binary.LittleEndian, &ev); err != nil {
 		return nil, fmt.Errorf("decoding exec event: %w", err)
@@ -257,13 +256,13 @@ func decodeExec(raw []byte) (*EnrichedEvent, error) {
 		Cmdline:   strings.Join(args, " "),
 		Tags:      []string{},
 	}
-	if _, ok := constants.AIProcessNames[comm]; ok {
+	if cfg.IsAIProcessComm(comm) {
 		out.IsAIProcess = true
 	}
 	return out, nil
 }
 
-func decodeFile(raw []byte, eventType uint8) (*EnrichedEvent, error) {
+func decodeFile(raw []byte, eventType uint8, cfg *aiprofile.Profile) (*EnrichedEvent, error) {
 	var ev BPFFileEvent
 	if err := binary.Read(bytes.NewReader(raw), binary.LittleEndian, &ev); err != nil {
 		return nil, fmt.Errorf("decoding file event: %w", err)
@@ -286,7 +285,7 @@ func decodeFile(raw []byte, eventType uint8) (*EnrichedEvent, error) {
 		RiskFlags: ev.RiskFlags,
 		Tags:      []string{},
 	}
-	out.ModelDetected = detectModelFile(filePath)
+	out.ModelDetected = cfg.ModelBasenameIfMatch(filePath)
 	return out, nil
 }
 
@@ -412,19 +411,6 @@ func nsToTime(ns uint64) time.Time {
 		return time.Now().UTC()
 	}
 	return bootTime.Add(time.Duration(ns)).UTC()
-}
-
-// detectModelFile checks whether the file path has a model file extension.
-// Returns the filename (basename) if it's a model file, empty string otherwise.
-func detectModelFile(path string) string {
-	if path == "" {
-		return ""
-	}
-	if _, ok := constants.ModelExtensions[constants.FileExt(path)]; ok {
-		lastSlash := strings.LastIndex(path, "/")
-		return path[lastSlash+1:]
-	}
-	return ""
 }
 
 func fileTypeStr(t uint8) string {

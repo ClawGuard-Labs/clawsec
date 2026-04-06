@@ -430,33 +430,70 @@ clawsec/
 ├── bpf/
 │   ├── monitor.bpf.c          # eBPF kernel programs (syscall tracepoints)
 │   ├── common.h               # Shared kernel/userspace structs and constants
-│   └── vmlinux.h              # BTF-generated kernel headers (CO-RE)
+│   ├── vmlinux.h              # BTF-generated kernel headers (CO-RE); see scripts/gen_vmlinux.sh
+│   └── monitor.bpf.o          # produced by `make build` (also under bin/ when copied)
+├── bin/                       # local build outputs: monitor, monitor.bpf.o (often gitignored)
 ├── cmd/monitor/
-│   └── main.go                # Entry point, flag parsing, pipeline wiring
+│   └── main.go                # Entry point, flags, config.yaml load, pipeline wiring
 ├── internal/
-|   ├── constants/
-|   |   ├── helpers.go
+│   ├── aiprofile/
+│   │   └── config.go          # Loads config.yaml (AI services, processes, model extensions)
+│   ├── chagg/                 # Chain aggregation for --compact / --compact-log
+│   │   ├── aggregator.go
+│   │   ├── types.go
+│   │   └── writer.go
+│   ├── constants/
+│   │   └── helpers.go         # FileExt, IsLocalhost, IsWriteOpen, SeverityScore, …
 │   ├── consumer/
 │   │   ├── consumer.go        # Ring buffer reader
-│   │   └── events.go          # Binary event structs + decoder + NucleiResult
+│   │   └── events.go          # BPF structs, decoder, EnrichedEvent, NucleiResult
 │   ├── correlator/
 │   │   ├── correlator.go      # PID tracking, session assignment
 │   │   └── session.go         # Session state machine
 │   ├── detector/
-│   │   ├── detector.go        # YAML template loader + Analyze()
-│   │   └── engine.go          # Template evaluation (7 matcher types)
+│   │   ├── detector.go        # Behavioral YAML loader + Analyze()
+│   │   └── engine.go          # Template evaluation (matcher types)
+│   ├── graph/
+│   │   ├── graph.go           # In-memory graph + snapshots + SSE subscribers
+│   │   └── builder.go         # Applies events + taint to the graph
+│   ├── graphapi/              # Dashboard HTTP server (--ui); embeds Vite build
+│   │   ├── server.go          # Routes: /api/graph, /api/alerts, /api/chains, /api/services, …
+│   │   ├── services.go        # Local AI process + port discovery for the UI bar
+│   │   └── static/            # Populated by `make ui` (go:embed)
 │   ├── loader/
-│   │   └── loader.go          # eBPF object loader + tracepoint attachment
+│   │   └── loader.go          # eBPF load, tracepoints, optional TLS uprobes / LSM
 │   ├── nucleiscanner/
-│   │   └── scanner.go         # Nuclei v3 engine wrapper + async scan queue
+│   │   └── scanner.go         # Nuclei v3 wrapper + localhost service probes
 │   ├── output/
-│   │   └── output.go          # Flat NDJSON + grouped JSON + SSE
+│   │   └── output.go          # NDJSON, grouped writer, SSE mirror
+│   ├── provenance/
+│   │   └── tracker.go         # Cross-session file / net_connect taint
 │   └── templates/
-│       ├── schema.go           # YAML template schema (Template, Matcher structs)
-│       └── loader.go           # Walk behavioral-templates dir, parse + compile regex
+│       ├── schema.go          # Behavioral template YAML schema
+│       └── loader.go          # Walk template dir, parse + compile matchers
+├── scripts/
+│   ├── clawsec.service        # systemd unit (installed to /etc/systemd/system/)
+│   ├── logrotate.d/clawsec
+│   ├── check_deps.sh
+│   └── gen_vmlinux.sh
+├── tests/                     # `go test ./tests/...`
+│   ├── *_test.go
+│   └── logs/                  # golden / fixture logs used by some tests
+├── ui/                        # Vite + React dashboard source
+│   ├── src/                   # App.jsx, GraphView, SessionGrid, AIServicesBar, …
+│   ├── index.html
+│   ├── vite.config.js
+│   └── package.json
+├── assets/                    # Screenshots for this README
+├── .github/                   # Issue/PR templates
+├── config.yaml                # Default AI profile; install copies to /etc/clawsec/config.yaml
 ├── go.mod
 ├── go.sum
-└── Makefile
+├── Makefile
+├── README.md
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+└── LICENSE
 ```
 
 Behavioral and Nuclei YAML live in the separate **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** repository.

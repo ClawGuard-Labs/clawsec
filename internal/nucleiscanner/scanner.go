@@ -30,6 +30,7 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
+	"github.com/clawsec/internal/aiprofile"
 	"github.com/clawsec/internal/constants"
 	"github.com/clawsec/internal/consumer"
 	outpkg "github.com/clawsec/internal/output"
@@ -66,6 +67,7 @@ type Scanner struct {
 	// pending maps "http://host:port" → scanMeta for result correlation
 	mu      sync.RWMutex
 	pending map[string]*scanMeta
+	cfg     *aiprofile.Profile
 }
 
 // SetRulesWriter registers an additional writer that receives every Nuclei
@@ -78,7 +80,7 @@ func (s *Scanner) SetRulesWriter(w outpkg.EventWriter) {
 // New initialises the Nuclei engine and returns a ready Scanner.
 // templatesDir must point to the nuclei-templates/ directory.
 // writer is the shared event output writer.
-func New(ctx context.Context, templatesDir string, writer outpkg.EventWriter, logger *zap.Logger) (*Scanner, error) {
+func New(ctx context.Context, templatesDir string, writer outpkg.EventWriter, logger *zap.Logger, cfg *aiprofile.Profile) (*Scanner, error) {
 	// Validate the templates directory before touching the engine.
 	// nuclei.NewThreadSafeNucleiEngine() will auto-download community templates
 	// when no local templates are found, which is undesirable here.
@@ -98,6 +100,7 @@ func New(ctx context.Context, templatesDir string, writer outpkg.EventWriter, lo
 		writer:       writer,
 		scanTTL:      10 * time.Minute,
 		pending:      make(map[string]*scanMeta),
+		cfg:          cfg,
 	}
 
 	engine, err := nuclei.NewThreadSafeNucleiEngine()
@@ -138,7 +141,7 @@ func (s *Scanner) MaybeScan(ctx context.Context, ev *consumer.EnrichedEvent) {
 	if !constants.IsLocalhost(ev.Network.DstIP) {
 		return
 	}
-	svcName, ok := constants.AIServicePorts[ev.Network.DstPort]
+	svcName, ok := s.cfg.ServiceNameForPort(ev.Network.DstPort)
 	if !ok {
 		return
 	}
@@ -178,7 +181,7 @@ func (s *Scanner) periodicDiscover(ctx context.Context) {
 // discoverServices TCP-dials each known AI service port on 127.0.0.1.
 // Open ports are passed to triggerScan (dedup prevents re-scanning within TTL).
 func (s *Scanner) discoverServices(ctx context.Context) {
-	for port, svcName := range constants.AIServicePorts {
+	for port, svcName := range s.cfg.ServicePorts() {
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		conn, err := net.DialTimeout("tcp", addr, discoveryDialTimeout)
 		if err != nil {

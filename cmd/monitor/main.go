@@ -31,6 +31,7 @@
 //   --sse         SSE listen address      (default: disabled)
 //   --ui          graph dashboard address (default: disabled)
 //   --log-level   debug|info|warn|error   (default: info)
+//   --config      path to config.yaml (default: ./config.yaml or beside binary)
 //   --no-tls      disable TLS uprobe capture (default: enabled if libssl found)
 //   --version     print version and exit
 package main
@@ -47,6 +48,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/clawsec/internal/aiprofile"
 	"github.com/clawsec/internal/chagg"
 	"github.com/clawsec/internal/consumer"
 	"github.com/clawsec/internal/correlator"
@@ -80,6 +82,7 @@ type config struct {
 	compact         bool
 	compactLog      string
 	compactIdle     time.Duration
+	configPath      string
 }
 
 func main() {
@@ -114,6 +117,8 @@ func main() {
 		"Path for compact chain log file (requires --compact)")
 	flag.DurationVar(&cfg.compactIdle, "compact-idle", 30*time.Second,
 		"Idle window before finalizing a process chain")
+	flag.StringVar(&cfg.configPath, "config", "",
+		"Path to config.yaml (AI ports, extensions, process names, categories). If empty, searches ./config.yaml then beside the binary")
 	flag.BoolVar(&showVersion, "version", false,
 		"Print version and exit")
 	flag.Parse()
@@ -150,6 +155,16 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	// The monitor reads /proc, its own template files, and makes connections
 	// during libssl scanning — all of which would create noisy false positives.
 	selfPID := uint32(os.Getpid())
+
+	cfgFile, err := aiprofile.ResolveConfigPath(cfg.configPath)
+	if err != nil {
+		return err
+	}
+	aiProf, err := aiprofile.Load(cfgFile)
+	if err != nil {
+		return fmt.Errorf("loading config.yaml %q: %w", cfgFile, err)
+	}
+	logger.Info("config.yaml loaded", zap.String("path", cfgFile))
 
 	// ── 1. Resolve BPF object path ────────────────────────────────────────
 	bpfPath, err := findBPFObject(cfg.bpfObjPath)
@@ -204,7 +219,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	}
 
 	// ── 6. Ring buffer consumer ───────────────────────────────────────────
-	cons, err := consumer.New(objs.EventsMap, logger)
+	cons, err := consumer.New(objs.EventsMap, logger, aiProf)
 	if err != nil {
 		return fmt.Errorf("creating consumer: %w", err)
 	}
@@ -267,7 +282,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	}
 
 	// ── 10. Provenance tracker + graph ───────────────────────────────────
-	tracker := provenance.New()
+	tracker := provenance.New(aiProf)
 	g := graph.New()
 
 	var agg *chagg.Aggregator
@@ -290,7 +305,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	}
 
 	if cfg.uiAddr != "" {
-		uiServer := graphapi.New(cfg.uiAddr, g, agg, logger)
+		uiServer := graphapi.New(cfg.uiAddr, g, agg, logger, aiProf)
 		go uiServer.Start(ctx)
 	} else {
 		logger.Info("graph dashboard disabled (enable with --ui :<port>)")
@@ -299,7 +314,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	// ── 11. Nuclei active scanner (optional) ─────────────────────────────
 	var nucleiScanner *nucleiscanner.Scanner
 	if !cfg.noNuclei {
-		ns, err := nucleiscanner.New(ctx, cfg.nucleiTemplates, out, logger)
+		ns, err := nucleiscanner.New(ctx, cfg.nucleiTemplates, out, logger, aiProf)
 		if err != nil {
 			// Non-fatal: log and continue without active scanning.
 			logger.Warn("nuclei scanner unavailable — active scanning disabled",

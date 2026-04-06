@@ -25,12 +25,14 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/ringbuf"
 	"go.uber.org/zap"
+	"github.com/clawsec/internal/aiprofile"
 )
 
 // Consumer polls the eBPF ring buffer and dispatches decoded events.
 type Consumer struct {
 	rd     *ringbuf.Reader
 	logger *zap.Logger
+	cfg    *aiprofile.Profile
 
 	// Stats
 	decoded  uint64
@@ -39,13 +41,12 @@ type Consumer struct {
 }
 
 // New creates a Consumer attached to the given ring buffer map.
-// Call Start to begin processing events.
-func New(eventsMap *ebpf.Map, logger *zap.Logger) (*Consumer, error) {
+func New(eventsMap *ebpf.Map, logger *zap.Logger, cfg *aiprofile.Profile) (*Consumer, error) {
 	rd, err := ringbuf.NewReader(eventsMap)
 	if err != nil {
 		return nil, fmt.Errorf("creating ring buffer reader: %w", err)
 	}
-	return &Consumer{rd: rd, logger: logger}, nil
+	return &Consumer{rd: rd, logger: logger, cfg: cfg}, nil
 }
 
 // Start begins reading events and returns a channel that emits them.
@@ -89,7 +90,7 @@ func (c *Consumer) Start(ctx context.Context) <-chan *EnrichedEvent {
 				continue
 			}
 
-			ev, err := Decode(record.RawSample)
+			ev, err := Decode(record.RawSample, c.cfg)
 
 			if err != nil {
 				c.decodeErr++

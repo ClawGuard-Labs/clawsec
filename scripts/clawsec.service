@@ -11,6 +11,7 @@ Group=root
 
 ExecStart=/usr/local/bin/clawsec \
     --ui :9090 \
+    --config /etc/clawsec/config.yaml \
     --bpf-obj   /usr/lib/clawsec/monitor.bpf.o \
     --behavioral-templates /etc/clawsec/behavioral-templates \
     --nuclei-templates /etc/clawsec/nuclei-templates \

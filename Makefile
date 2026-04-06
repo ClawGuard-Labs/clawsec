@@ -185,6 +185,8 @@ install: build
 	@echo "==> Installing binary and BPF object..."
 	sudo install -m 0755 $(BINARY)   $(SVC_BINARY)
 	sudo install -m 0644 bin/monitor.bpf.o $(SVC_LIB)/monitor.bpf.o
+	@echo "==> Installing config.yaml..."
+	sudo install -m 0644 config.yaml $(SVC_ETC)/config.yaml
 	@echo "==> Installing templates from $(TEMPLATES_SRC)..."
 	sudo cp -r "$(TEMPLATES_SRC)"/behavioral-templates/* $(SVC_ETC)/behavioral-templates/
 	sudo cp -r "$(TEMPLATES_SRC)"/nuclei-templates/* $(SVC_ETC)/nuclei-templates/

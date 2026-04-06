@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
+	"github.com/clawsec/internal/aiprofile"
 	"github.com/clawsec/internal/chagg"
 	"github.com/clawsec/internal/graph"
 )
@@ -37,12 +37,12 @@ type Server struct {
 	agg    *chagg.Aggregator // nil when --compact is not enabled
 	logger *zap.Logger
 	srv    *http.Server
+	cfg    *aiprofile.Profile
 }
 
 // New creates a Server bound to addr (e.g. ":9090") backed by g.
-// agg may be nil when chain aggregation is disabled.
-func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger) *Server {
-	s := &Server{g: g, agg: agg, logger: logger}
+func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger, cfg *aiprofile.Profile) *Server {
+	s := &Server{g: g, agg: agg, logger: logger, cfg: cfg}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/graph/events", s.handleSSE)
