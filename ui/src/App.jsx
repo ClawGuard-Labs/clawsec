@@ -1,12 +1,12 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import './App.css'
 import { useGraphSSE }   from './useGraphSSE'
 import { AlertPanel }    from './AlertPanel'
 import { AIServicesBar }  from './AIServicesBar'
 import { SessionGrid, buildSessions } from './SessionGrid'
-import { GraphView }     from './GraphView'
 import { Inspector }     from './Inspector'
 
+const GraphView = lazy(() => import('./GraphView').then(m => ({ default: m.GraphView })))
 // Filter nodes and edges to only those belonging to a specific session.
 // File and network nodes that have no session_id are included if they are
 // directly connected (via an edge) to a process in the session.
@@ -131,14 +131,15 @@ export default function App() {
 
         {selectedSession ? (
           // ── Drill-down: full Cytoscape graph for one session ──────────────
-          <GraphView
-            nodes={filteredNodes}
-            edges={filteredEdges}
-            highlightedNodeIds={highlightedNodeIds}
-            onNodeSelect={handleNodeSelect}
-            onBack={handleBack}
-            sessionLabel={selectedSession}
-          />
+          <Suspense fallback={<div className="graph-area"><div className="empty-state">Loading graph…</div></div>}>
+            <GraphView
+              nodes={filteredNodes}
+              edges={filteredEdges}
+              highlightedNodeIds={highlightedNodeIds}
+              onNodeSelect={handleNodeSelect}
+              onBack={handleBack}
+            />
+          </Suspense>
         ) : (
           <SessionGrid
             sessions={sessions}

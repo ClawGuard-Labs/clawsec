@@ -8,6 +8,14 @@ export default defineConfig({
   build: {
     outDir: '../internal/graphapi/static',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'graph-vendor': ['cytoscape', 'cytoscape-dagre'],
+        },
+      },
+    },
   },
   server: {
     proxy: {

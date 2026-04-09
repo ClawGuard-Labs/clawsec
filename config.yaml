@@ -51,7 +51,8 @@ ai:
     - .weights
     - .model
     - .tflite
-
+# Process name must match the exact executable name running on the system.
+# For eg, openclaw runs as "openclaw-gatewa" not as "openclaw-gateway"
   processes:
     - name: python
       category: runtime
@@ -85,6 +86,8 @@ ai:
       category: runtime
     - name: deno
       category: runtime
+    - name: openclaw-gatewa
+      category: agent
     - name: cargo
     - name: rust-ai
 

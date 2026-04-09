@@ -27,10 +27,6 @@ function categoryLabel(cat) {
   }
 }
 
-function statusIcon(status) {
-  return status === 'listening' ? '●' : '●'
-}
-
 export const AIServicesBar = React.memo(function AIServicesBar() {
   const [services, setServices] = useState([])
   const [error, setError] = useState(false)
@@ -122,7 +118,7 @@ export const AIServicesBar = React.memo(function AIServicesBar() {
                 >
                   {categoryLabel(p.category)}
                 </span>
-                <span className="asb-status asb-status-running">{statusIcon(p.status)}</span>
+                <span className="asb-status asb-status-running">●</span>
               </div>
             ))}
           </div>
@@ -156,7 +152,7 @@ export const AIServicesBar = React.memo(function AIServicesBar() {
                 >
                   {categoryLabel(s.category)}
                 </span>
-                <span className="asb-status asb-status-listening">{statusIcon(s.status)}</span>
+                <span className="asb-status asb-status-listening">●</span>
               </div>
             ))}
           </div>

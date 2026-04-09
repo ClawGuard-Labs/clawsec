@@ -95,7 +95,7 @@
   font-size: .5rem; line-height: 1;
 }
 .asb-status-running  { color: var(--green); }
-.asb-status-listening { color: var(--green); }
+.asb-status-listening { color: var(--red); }
 .asb-divider {
   width: 1px; height: 18px; background: var(--border); flex-shrink: 0;
 }
