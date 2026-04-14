@@ -1,4 +1,4 @@
-# Contributing to ClawSec
+# Contributing to Onyx
 
 Thank you for your interest in contributing. This document explains how to get set up, report issues, and submit changes.
 
@@ -24,13 +24,13 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 ### Build and run
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/clawsec.git
-git clone https://github.com/ClawGuard-Labs/clawsec-templates.git
-cd clawsec
+git clone https://github.com/ClawGuard-Labs/onyx.git
+git clone https://github.com/ClawGuard-Labs/onyx-templates.git
+cd onyx
 make build
 ```
 
-For running the monitor locally, clone **clawsec-templates** under `clawsec/clawsec-templates` or pass `--behavioral-templates` / `--nuclei-templates` (see [README — Quick Start](README.md#quick-start)). For system install, `sudo make install` reads YAML from `../clawsec-templates` by default (`TEMPLATES_SRC`).
+For running the monitor locally, clone **onyx-templates** under `onyx/onyx-templates` or pass `--behavioral-templates` / `--nuclei-templates` (see [README — Quick Start](README.md#quick-start)). For system install, `sudo make install` reads YAML from `../onyx-templates` by default (`TEMPLATES_SRC`).
 
 See [README.md](README.md#quick-start) for full options and [Build Targets](README.md#build-targets).
 
@@ -55,14 +55,14 @@ See [README.md](README.md#quick-start) for full options and [Build Targets](READ
 
 - **Go** — Use `gofmt`; run `make fmt`. Follow standard Go style.
 - **eBPF/C** — Match existing style in `bpf/`; run `make fmt` for C.
-- **Templates** — YAML rules live in **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)**; follow [AUTHORING.md](https://github.com/ClawGuard-Labs/clawsec-templates/blob/main/AUTHORING.md) and the layout there.
+- **Templates** — YAML rules live in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)**; follow [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md) and the layout there.
 - **Commits** — Use present tense and a clear summary (e.g. "Add CONTRIBUTING.md", "Fix session flush timeout").
 
 ## Adding detection rules
 
-Open PRs against **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** (not this repo).
+Open PRs against **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** (not this repo).
 
-- **Behavioral rules** — Add `.yaml` under `behavioral-templates/session|file|process|network/`. See [Detection Templates](README.md#detection-templates) and clawsec-templates [AUTHORING.md](https://github.com/ClawGuard-Labs/clawsec-templates/blob/main/AUTHORING.md).
+- **Behavioral rules** — Add `.yaml` under `behavioral-templates/session|file|process|network/`. See [Detection Templates](README.md#detection-templates) and onyx-templates [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md).
 - **Nuclei rules** — Add Nuclei v3 HTTP templates under `nuclei-templates/ai-services/`.
 
 ## Recognition

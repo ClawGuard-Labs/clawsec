@@ -1,11 +1,11 @@
-# Makefile — ClawSec
+# Makefile — Onyx
 #
 # Build pipeline:
 #   1. gen-vmlinux : generate bpf/vmlinux.h from running kernel BTF
 #   2. bpf         : compile monitor.bpf.c → monitor.bpf.o (eBPF bytecode)
 #   3. ui          : build React dashboard (Vite) → internal/graphapi/static/
 #   4. build       : compile Go daemon binary (embeds the built UI)
-#   5. install     : install binary, BPF object, templates from clawsec-templates + systemd unit
+#   5. install     : install binary, BPF object, templates from onyx-templates + systemd unit
 #
 # Targets:
 #   make deps          — check all build/runtime dependencies
@@ -18,10 +18,10 @@
 #   make run           — build and run as root (requires root)
 #   make fmt           — format Go and C source files
 #   make install       — install as systemd service (then: sudo make enable)
-#                      — set TEMPLATES_SRC=../clawsec-templates (default) to find YAML bundles
+#                      — set TEMPLATES_SRC=../onyx-templates (default) to find YAML bundles
 #   make uninstall     — stop, disable and remove all installed files
-#   make enable        — systemctl enable --now clawsec
-#   make disable       — systemctl disable --now clawsec
+#   make enable        — systemctl enable --now onyx
+#   make disable       — systemctl disable --now onyx
 
 # ── Tool configuration ────────────────────────────────────────────────────────
 CLANG           ?= clang
@@ -152,7 +152,7 @@ run: build
 	sudo $(BINARY)
 
 # ── Install paths ─────────────────────────────────────────────────────────────
-SVC_NAME     := clawsec
+SVC_NAME     := onyx
 SVC_BINARY   := /usr/local/bin/$(SVC_NAME)
 SVC_LIB      := /usr/lib/$(SVC_NAME)
 SVC_ETC      := /etc/$(SVC_NAME)
@@ -160,22 +160,22 @@ SVC_LOG      := /var/log/$(SVC_NAME)
 SVC_UNIT     := /etc/systemd/system/$(SVC_NAME).service
 SVC_ROTATE   := /etc/logrotate.d/$(SVC_NAME)
 
-# Checkout of https://github.com/ClawGuard-Labs/clawsec-templates
-TEMPLATES_SRC ?= ../clawsec-templates
+# Checkout of https://github.com/ClawGuard-Labs/onyx-templates
+TEMPLATES_SRC ?= ../onyx-templates
 
 # ── Install ───────────────────────────────────────────────────────────────────
 # Installs binary, BPF object, YAML templates from TEMPLATES_SRC, systemd unit, logrotate.
 # Requires: $(TEMPLATES_SRC)/behavioral-templates and $(TEMPLATES_SRC)/nuclei-templates
-# After install: sudo systemctl enable --now clawsec
+# After install: sudo systemctl enable --now onyx
 .PHONY: install
 install: deps gen-vmlinux bpf build
 	@test -d "$(TEMPLATES_SRC)/behavioral-templates" || ( \
 		echo "ERROR: $(TEMPLATES_SRC)/behavioral-templates not found."; \
-		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		echo "  Clone onyx-templates next to onyx, or run: sudo make install TEMPLATES_SRC=/path/to/onyx-templates"; \
 		exit 1)
 	@test -d "$(TEMPLATES_SRC)/nuclei-templates" || ( \
 		echo "ERROR: $(TEMPLATES_SRC)/nuclei-templates not found."; \
-		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		echo "  Clone onyx-templates next to onyx, or run: sudo make install TEMPLATES_SRC=/path/to/onyx-templates"; \
 		exit 1)
 	@echo "==> Creating directories..."
 	sudo install -d -m 0755 $(SVC_LIB)
@@ -265,7 +265,7 @@ distclean: clean
 # ── Help ─────────────────────────────────────────────────────────────────────
 .PHONY: help
 help:
-	@echo "ClawSec — eBPF AI Agent Monitoring Tool"
+	@echo "Onyx — eBPF AI Agent Monitoring Tool"
 	@echo ""
 	@echo "Targets:"
 	@echo "  deps          Check all build and runtime dependencies"
@@ -276,10 +276,10 @@ help:
 	@echo "  build-no-ui   Full build skipping React rebuild (faster iteration)"
 	@echo "  verify        Dry-run verify eBPF program with bpftool"
 	@echo "  run           Build and run as root"
-	@echo "  install       Install binary, BPF, YAML from TEMPLATES_SRC (../clawsec-templates), systemd + logrotate"
+	@echo "  install       Install binary, BPF, YAML from TEMPLATES_SRC (../onyx-templates), systemd + logrotate"
 	@echo "  uninstall     Stop, disable, and remove all installed files"
-	@echo "  enable        systemctl enable --now clawsec"
-	@echo "  disable       systemctl disable --now clawsec"
+	@echo "  enable        systemctl enable --now onyx"
+	@echo "  disable       systemctl disable --now onyx"
 	@echo "  test          Run template detection tests (logs in tests/logs/)"
 	@echo "  fmt           Format Go and C source files"
 	@echo "  clean         Remove build artifacts"

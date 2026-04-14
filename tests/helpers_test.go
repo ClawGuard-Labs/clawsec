@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	"github.com/clawsec/internal/templates"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/correlator"
+	"github.com/onyx/internal/templates"
 )
 
-// Sibling of the clawsec repo: ../clawsec-templates from repo root; tests/ is one level deeper.
-const templatesDir = "../../clawsec-templates/behavioral-templates"
+// Sibling of the onyx repo: ../onyx-templates from repo root; tests/ is one level deeper.
+const templatesDir = "../../onyx-templates/behavioral-templates"
 
 var (
 	allTemplates []templates.Template

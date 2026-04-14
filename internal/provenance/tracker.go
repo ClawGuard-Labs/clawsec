@@ -42,9 +42,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
+	"github.com/onyx/internal/aiprofile"
+	"github.com/onyx/internal/constants"
+	"github.com/onyx/internal/consumer"
 )
 
 // ─── constants ───────────────────────────────────────────────────────────────

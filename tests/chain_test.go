@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clawsec/internal/chagg"
+	"github.com/onyx/internal/chagg"
 )
 
 var chainLogger = categoryLogger("chain")

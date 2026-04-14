@@ -1,4 +1,4 @@
-# ClawSec
+# Onyx
 
 **Kernel-level behavioral monitoring and active vulnerability scanning for AI/ML workloads on Linux.**
 
@@ -14,10 +14,27 @@ Combines two complementary detection engines:
 - **Nuclei v3 integration** — Active scanning of local AI services (Qdrant, ChromaDB, Ollama, vLLM, etc.) when connections are observed
 - **Session correlation** — Process tree and session IDs for grouping events
 - **Output** — NDJSON, grouped JSON, or live SSE stream
-- **Detection templates** — Shipped in **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** (`behavioral-templates/`, `nuclei-templates/`)
+- **Detection templates** — Shipped in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** (`behavioral-templates/`, `nuclei-templates/`)
 - **React dashboard** (optional) — Graph view and alert panel served by the monitor
 
 ---
+
+## Table of contents
+
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Build Targets](#build-targets)
+- [Output Format](#output-format)
+- [Testing](#testing)
+- [Detection templates (onyx-templates)](#detection-templates-onyx-templates)
+- [Running as a Background Service (systemd)](#running-as-a-background-service-systemd)
+- [SSE Live Stream](#sse-live-stream)
+- [Project Structure](#project-structure)
+- [Dependencies](#dependencies)
+- [Contributing](#contributing)
+- [License](#license)
+- [Security](#security)
 
 ## Architecture
 
@@ -67,29 +84,29 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 
 ## Quick Start
 
-YAML detection rules are **not** in this repository. Clone **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** next to `clawsec` (or anywhere you prefer).
+YAML detection rules are **not** in this repository. Clone **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** next to `onyx` (or anywhere you prefer).
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/clawsec
-git clone https://github.com/ClawGuard-Labs/clawsec-templates
-cd clawsec
+git clone https://github.com/ClawGuard-Labs/onyx
+git clone https://github.com/ClawGuard-Labs/onyx-templates
+cd onyx
 make build
 ```
 
-**Option A — defaults** — from the `clawsec` repo directory, defaults expect **`./clawsec-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `clawsec` (nested), or symlink:
+**Option A — defaults** — from the `onyx` repo directory, defaults expect **`./onyx-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `onyx` (nested), or symlink:
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/clawsec-templates.git clawsec-templates
-ln -sfn clawsec-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
+git clone https://github.com/ClawGuard-Labs/onyx-templates.git onyx-templates
+ln -sfn onyx-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
 sudo ./bin/monitor
 ```
 
-If **clawsec-templates** sits **next to** `clawsec` (sibling), pass paths explicitly:
+If **onyx-templates** sits **next to** `onyx` (sibling), pass paths explicitly:
 
 ```bash
 sudo ./bin/monitor \
-  --behavioral-templates ../clawsec-templates/behavioral-templates \
-  --nuclei-templates ../clawsec-templates/nuclei-templates
+  --behavioral-templates ../onyx-templates/behavioral-templates \
+  --nuclei-templates ../onyx-templates/nuclei-templates
 ```
 
 **More flags:**
@@ -102,7 +119,7 @@ sudo ./bin/monitor \
   --group-timeout   500ms
 ```
 
-See [Template bundles (clawsec-templates)](#template-bundles-clawsec-templates) for installs, authoring, and tests.
+See [Template bundles (onyx-templates)](#template-bundles-onyx-templates) for installs, authoring, and tests.
 
 ---
 
@@ -113,18 +130,16 @@ make build          # Compile Go binary + embed eBPF object → bin/monitor
 make bpf            # Recompile eBPF C → bpf/monitor.bpf.o  (needs clang)
 make gen-vmlinux    # Regenerate vmlinux.h from kernel BTF   (once per kernel)
 make run            # Build and run as root
-make install        # Install to /usr/local/bin/clawsec
+make install        # Install to /usr/local/bin/onyx
 make clean          # Remove bin/
 ```
 
----
-
-## Flags
+### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/clawsec/` |
-| `--behavioral-templates <dir>` | `./clawsec-templates/behavioral-templates` | Directory containing behavioral YAML rules |
+| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/onyx/` |
+| `--behavioral-templates <dir>` | `./onyx-templates/behavioral-templates` | Directory containing behavioral YAML rules |
 | `--nuclei-templates <dir>` | `./nuclei-templates` | Directory containing Nuclei YAML templates for active scanning |
 | `--no-nuclei` | false | Disable active Nuclei scanning |
 | `--output <file>` | stdout | JSON output file (appended) |
@@ -134,58 +149,6 @@ make clean          # Remove bin/
 | `--log-level <level>` | `info` | Log verbosity: `debug` \| `info` \| `warn` \| `error` |
 | `--no-tls` | false | Disable TLS uprobe capture (uprobes on `libssl.so`) |
 | `--version` | — | Print version and exit |
-
----
-
-## Detection Templates
-
-Rules are maintained in **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/clawsec-templates/blob/main/AUTHORING.md).
-
-
-YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
-
-
-
-
-
-
-
-
-#### How Nuclei scanning is triggered
-
-```
-eBPF event: net_connect
-  DstIP  = 127.0.0.1
-  DstPort = 6333           ← known AI service port (Qdrant)
-      │
-      ├─→ Behavioral detector runs (all YAML rules)
-      │
-      └─→ Nuclei scanner (async goroutine):
-              http://127.0.0.1:6333  ← scan target
-              ↓
-              nuclei-templates/ai-services/*.yaml
-              ↓
-              finding: qdrant-unauth-access (severity: high)
-              ↓
-              emitted as nuclei_finding event → JSON output
-```
-
-**Scanned AI service ports:**
-
-| Port | Service |
-|------|---------|
-| 6333 | Qdrant |
-| 8000 | ChromaDB |
-| 8080 | Weaviate |
-| 11434 | Ollama |
-| 8001 | vLLM |
-| 7860 | Gradio |
-| 8501 | Streamlit |
-| 3000 | LocalAI |
-| 19530 | Milvus |
-| 9200 | Elasticsearch |
-
-Deduplication: each unique `host:port` is scanned at most once per 10 minutes.
 
 ---
 
@@ -284,7 +247,7 @@ cat nuclei_test.json | jq 'select(.event_type == "nuclei_finding")'
 ```bash
 # Check behavioral templates load (seen in startup logs)
 sudo ./bin/monitor --log-level info 2>&1 | grep "templates loaded"
-# Expected: INFO  detection templates loaded  {"count": N, "dir": "./clawsec-templates/behavioral-templates"}
+# Expected: INFO  detection templates loaded  {"count": N, "dir": "./onyx-templates/behavioral-templates"}
 
 # Check Nuclei engine starts
 sudo ./bin/monitor --log-level info 2>&1 | grep "nuclei"
@@ -296,7 +259,7 @@ sudo ./bin/monitor --log-level info 2>&1 | grep "nuclei"
 
 ```bash
 sudo ./bin/monitor \
-  --behavioral-templates ./clawsec-templates/behavioral-templates \
+  --behavioral-templates ./onyx-templates/behavioral-templates \
   --nuclei-templates ./nuclei-templates \
   --output           events.json \
   --log-level        debug \
@@ -306,32 +269,72 @@ sudo ./bin/monitor \
 
 ---
 
-## Template bundles (clawsec-templates)
+## Detection templates (onyx-templates)
+
+Rules are maintained in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md).
+
+YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
 
 | Repository | Role |
 |------------|------|
-| **[clawsec](https://github.com/ClawGuard-Labs/clawsec)** (this repo) | eBPF monitor, Go engine, UI |
-| **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
+| **[onyx](https://github.com/ClawGuard-Labs/onyx)** (this repo) | eBPF monitor, Go engine, UI |
+| **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
 
 **Local development**
 
-- Clone or symlink so **`./clawsec-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
+- Clone or symlink so **`./onyx-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
 
 **`make install`**
 
-- Install copies YAML from **`TEMPLATES_SRC`** (default: `../clawsec-templates` relative to the `clawsec` tree):
+- Install copies YAML from **`TEMPLATES_SRC`** (default: `../onyx-templates` relative to the `onyx` tree):
 
   ```bash
   sudo make install
   # or:
-  sudo make install TEMPLATES_SRC=/opt/src/clawsec-templates
+  sudo make install TEMPLATES_SRC=/opt/src/onyx-templates
   ```
 
-- Behavioral rules go to **`/etc/clawsec/behavioral-templates/`**; Nuclei rules to **`/etc/clawsec/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
+- Behavioral rules go to **`/etc/onyx/behavioral-templates/`**; Nuclei rules to **`/etc/onyx/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
 
 **Tests**
 
-- `go test ./...` from `tests/` loads behavioral YAML from **`../../clawsec-templates/behavioral-templates`** (sibling of the `clawsec` repo). Adjust `tests/helpers_test.go` if your layout differs.
+- `go test ./...` from `tests/` loads behavioral YAML from **`../../onyx-templates/behavioral-templates`** (sibling of the `onyx` repo). Adjust `tests/helpers_test.go` if your layout differs.
+
+**How Nuclei scanning is triggered**
+
+```
+eBPF event: net_connect
+  DstIP  = 127.0.0.1
+  DstPort = 6333           ← known AI service port (Qdrant)
+      │
+      ├─→ Behavioral detector runs (all YAML rules)
+      │
+      └─→ Nuclei scanner (async goroutine):
+              http://127.0.0.1:6333  ← scan target
+              ↓
+              nuclei-templates/ai-services/*.yaml
+              ↓
+              finding: qdrant-unauth-access (severity: high)
+              ↓
+              emitted as nuclei_finding event → JSON output
+```
+
+**Scanned AI service ports:**
+
+| Port | Service |
+|------|---------|
+| 6333 | Qdrant |
+| 8000 | ChromaDB |
+| 8080 | Weaviate |
+| 11434 | Ollama |
+| 8001 | vLLM |
+| 7860 | Gradio |
+| 8501 | Streamlit |
+| 3000 | LocalAI |
+| 19530 | Milvus |
+| 9200 | Elasticsearch |
+
+Deduplication: each unique `host:port` is scanned at most once per 10 minutes.
 
 ---
 
@@ -353,12 +356,12 @@ sudo make install
 
 | Path | Contents |
 |------|----------|
-| `/usr/local/bin/clawsec` | Binary |
-| `/usr/lib/clawsec/monitor.bpf.o` | eBPF object |
-| `/etc/clawsec/behavioral-templates/` | Behavioral detection rules (from `clawsec-templates`) |
-| `/etc/clawsec/nuclei-templates/` | Nuclei active scan templates (from `clawsec-templates`) |
-| `/etc/systemd/system/clawsec.service` | systemd unit |
-| `/etc/logrotate.d/clawsec` | Log rotation config |
+| `/usr/local/bin/onyx` | Binary |
+| `/usr/lib/onyx/monitor.bpf.o` | eBPF object |
+| `/etc/onyx/behavioral-templates/` | Behavioral detection rules (from `onyx-templates`) |
+| `/etc/onyx/nuclei-templates/` | Nuclei active scan templates (from `onyx-templates`) |
+| `/etc/systemd/system/onyx.service` | systemd unit |
+| `/etc/logrotate.d/onyx` | Log rotation config |
 
 ### 2. Enable and start
 
@@ -367,28 +370,28 @@ sudo make install
 sudo make enable
 
 # Or manually with systemctl
-sudo systemctl enable --now clawsec
+sudo systemctl enable --now onyx
 ```
 
 ### 3. Check status and logs
 
 ```bash
 # Service status
-sudo systemctl status clawsec
+sudo systemctl status onyx
 
 # Live logs (journald)
-journalctl -u clawsec -f
+journalctl -u onyx -f
 
 # Output log file (NDJSON events)
-tail -f /var/log/clawsec/monitor.log
+tail -f /var/log/onyx/monitor.log
 ```
 
 ### 4. Stop / restart / disable
 
 ```bash
-sudo systemctl stop    clawsec
-sudo systemctl restart clawsec
-sudo systemctl disable clawsec   # removes from boot
+sudo systemctl stop    onyx
+sudo systemctl restart onyx
+sudo systemctl disable onyx   # removes from boot
 ```
 
 ### 5. Uninstall
@@ -397,8 +400,8 @@ sudo systemctl disable clawsec   # removes from boot
 # Stops the service, disables it, and removes all installed files
 sudo make uninstall
 
-# Logs at /var/log/clawsec/ are preserved — remove manually if desired
-sudo rm -rf /var/log/clawsec/
+# Logs at /var/log/onyx/ are preserved — remove manually if desired
+sudo rm -rf /var/log/onyx/
 ```
 
 The default `ExecStart` passes the installed template directories and enables the web UI on port 9090:
@@ -426,7 +429,7 @@ curl http://localhost:8080/healthz
 ## Project Structure
 
 ```
-clawsec/
+onyx/
 ├── bpf/
 │   ├── monitor.bpf.c          # eBPF kernel programs (syscall tracepoints)
 │   ├── common.h               # Shared kernel/userspace structs and constants
@@ -472,8 +475,8 @@ clawsec/
 │       ├── schema.go          # Behavioral template YAML schema
 │       └── loader.go          # Walk template dir, parse + compile matchers
 ├── scripts/
-│   ├── clawsec.service        # systemd unit (installed to /etc/systemd/system/)
-│   ├── logrotate.d/clawsec
+│   ├── onyx.service        # systemd unit (installed to /etc/systemd/system/)
+│   ├── logrotate.d/onyx
 │   ├── check_deps.sh
 │   └── gen_vmlinux.sh
 ├── tests/                     # `go test ./tests/...`
@@ -486,7 +489,7 @@ clawsec/
 │   └── package.json
 ├── assets/                    # Screenshots for this README
 ├── .github/                   # Issue/PR templates
-├── config.yaml                # Default AI profile; install copies to /etc/clawsec/config.yaml
+├── config.yaml                # Default AI profile; install copies to /etc/onyx/config.yaml
 ├── go.mod
 ├── go.sum
 ├── Makefile
@@ -496,18 +499,18 @@ clawsec/
 └── LICENSE
 ```
 
-Behavioral and Nuclei YAML live in the separate **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** repository.
+Behavioral and Nuclei YAML live in the separate **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** repository.
 
 ### Preview
 
 <p align="center">
   <img src="./assets/logs.png" width="1000"><br>
-  <em>Realtime logs (ClawSec running as a systemd service)</em>
+  <em>Realtime logs (onyx running as a systemd service)</em>
 </p>
 
 <p align="center">
   <img src="./assets/dashboard.png" width="1000"><br>
-  <em>ClawSec Dashboard</em>
+  <em>onyx Dashboard</em>
 </p>
 
 <p align="center">

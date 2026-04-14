@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
+	"github.com/onyx/internal/consumer"
 )
 
 const (

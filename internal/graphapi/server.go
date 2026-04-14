@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/graph"
+	"github.com/onyx/internal/aiprofile"
+	"github.com/onyx/internal/chagg"
+	"github.com/onyx/internal/graph"
 )
 
 //go:embed static

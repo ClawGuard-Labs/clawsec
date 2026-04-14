@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/provenance"
+	"github.com/onyx/internal/chagg"
+	"github.com/onyx/internal/constants"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/provenance"
 )
 
 // liveChain tracks a spawned-edge path from a parent for chain-wise compaction.

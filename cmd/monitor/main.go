@@ -1,4 +1,4 @@
-// clawsec — host-level eBPF monitoring for AI agent processes.
+// Onyx — host-level eBPF monitoring for AI agent processes.
 //
 // Architecture:
 //
@@ -26,7 +26,7 @@
 //
 // Flags:
 //   --bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
-//   --behavioral-templates  path to behavioral YAML dir (default: ./clawsec-templates/behavioral-templates)
+//   --behavioral-templates  path to behavioral YAML dir (default: ./onyx-templates/behavioral-templates)
 //   --output      JSON output file        (default: stdout)
 //   --sse         SSE listen address      (default: disabled)
 //   --ui          graph dashboard address (default: disabled)
@@ -48,17 +48,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	"github.com/clawsec/internal/detector"
-	"github.com/clawsec/internal/graph"
-	"github.com/clawsec/internal/graphapi"
-	"github.com/clawsec/internal/loader"
-	"github.com/clawsec/internal/nucleiscanner"
-	"github.com/clawsec/internal/output"
-	"github.com/clawsec/internal/provenance"
+	"github.com/onyx/internal/aiprofile"
+	"github.com/onyx/internal/chagg"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/correlator"
+	"github.com/onyx/internal/detector"
+	"github.com/onyx/internal/graph"
+	"github.com/onyx/internal/graphapi"
+	"github.com/onyx/internal/loader"
+	"github.com/onyx/internal/nucleiscanner"
+	"github.com/onyx/internal/output"
+	"github.com/onyx/internal/provenance"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -90,8 +90,8 @@ func main() {
 	showVersion := false
 
 	flag.StringVar(&cfg.bpfObjPath, "bpf-obj", "",
-		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/clawsec/)")
-	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./clawsec-templates/behavioral-templates",
+		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/onyx/)")
+	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./onyx-templates/behavioral-templates",
 		"Directory containing behavioral YAML detection rules")
 	flag.StringVar(&cfg.nucleiTemplates, "nuclei-templates", "./nuclei-templates",
 		"Directory containing Nuclei YAML templates for active scanning")
@@ -124,7 +124,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("clawsec %s\n", Version)
+		fmt.Printf("onyx %s\n", Version)
 		os.Exit(0)
 	}
 
@@ -199,7 +199,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	//   - every YAML template file (behavioral + nuclei)
 	//
 	// We resolve the binary path via os.Executable() so it works whether the
-	// user ran ./bin/monitor or /usr/local/bin/clawsec.
+	// user ran ./bin/monitor or /usr/local/bin/onyx.
 	protectedPaths := collectProtectedPaths(cfg, bpfPath, logger)
 	if err := objs.PopulateProtectionMaps(selfPID, protectedPaths, logger); err != nil {
 		// Non-fatal: log and continue.  LSM hooks will simply allow everything
@@ -231,7 +231,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	det, err := detector.New(logger, cfg.behavioralTemplatesDir)
 	if err != nil {
 		return fmt.Errorf("loading detection templates: %w\n"+
-			"  Clone clawsec-templates alongside this binary (./clawsec-templates/behavioral-templates)\n"+
+			"  Clone onyx-templates alongside this binary (./onyx-templates/behavioral-templates)\n"+
 			"  or pass: --behavioral-templates /path/to/behavioral-templates", err)
 	}
 
@@ -422,7 +422,7 @@ func splitOutputPaths(path string) (logsPath, rulesPath string) {
 //  1. Explicit --bpf-obj flag value
 //  2. Same directory as the running binary (deployment default)
 //  3. bpf/monitor.bpf.o relative to CWD  (development / make run)
-//  4. /usr/lib/clawsec/monitor.bpf.o  (installed via make install)
+//  4. /usr/lib/onyx/monitor.bpf.o  (installed via make install)
 func findBPFObject(flagPath string) (string, error) {
 	candidates := []string{}
 
@@ -437,7 +437,7 @@ func findBPFObject(flagPath string) (string, error) {
 
 	candidates = append(candidates,
 		"bpf/monitor.bpf.o",
-		"/usr/lib/clawsec/monitor.bpf.o",
+		"/usr/lib/onyx/monitor.bpf.o",
 	)
 
 	for _, p := range candidates {

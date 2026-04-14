@@ -25,7 +25,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/ringbuf"
 	"go.uber.org/zap"
-	"github.com/clawsec/internal/aiprofile"
+	"github.com/onyx/internal/aiprofile"
 )
 
 // Consumer polls the eBPF ring buffer and dispatches decoded events.

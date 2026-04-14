@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	tmpl "github.com/clawsec/internal/templates"
+	"github.com/onyx/internal/constants"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/correlator"
+	tmpl "github.com/onyx/internal/templates"
 )
 
 // Evaluate returns true if all (or any, depending on matchers-condition)

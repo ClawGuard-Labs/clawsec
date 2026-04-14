@@ -109,7 +109,7 @@ export default function App() {
                 <span className="topbar-sep">·</span>
                 {selectedSession}
               </>
-            : 'ClawSec — Session Overview'
+            : 'Onyx — Session Overview'
           }
         </span>
         <span className="status-pill">

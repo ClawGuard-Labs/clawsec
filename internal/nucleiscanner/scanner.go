@@ -30,10 +30,10 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	outpkg "github.com/clawsec/internal/output"
+	"github.com/onyx/internal/aiprofile"
+	"github.com/onyx/internal/constants"
+	"github.com/onyx/internal/consumer"
+	outpkg "github.com/onyx/internal/output"
 )
 
 const (

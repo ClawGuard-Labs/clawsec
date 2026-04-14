@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/detector"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/detector"
 )
 
 func TestConfigAccess(t *testing.T) {

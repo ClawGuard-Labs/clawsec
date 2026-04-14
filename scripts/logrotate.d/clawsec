@@ -1,5 +1,5 @@
-/var/log/clawsec/*.log
-/var/log/clawsec/*.json {
+/var/log/onyx/*.log
+/var/log/onyx/*.json {
     daily
     rotate 14
     compress
@@ -10,7 +10,7 @@
     sharedscripts
     postrotate
         # signal monitor to reopen log files if running
-        systemctl -q is-active clawsec && \
-            systemctl kill --kill-who=main --signal=SIGUSR1 clawsec || true
+        systemctl -q is-active onyx && \
+            systemctl kill --kill-who=main --signal=SIGUSR1 onyx || true
     endscript
 }

@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	"github.com/clawsec/internal/detector"
+	"github.com/onyx/internal/consumer"
+	"github.com/onyx/internal/correlator"
+	"github.com/onyx/internal/detector"
 )
 
 func TestAIProcess(t *testing.T) {
