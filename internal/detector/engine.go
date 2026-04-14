@@ -60,6 +60,8 @@ func evalMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent, sess *correlator.S
 		result = evalProcessMatcher(m, ev)
 	case "filepath":
 		result = evalFilepathMatcher(m, ev)
+	case "file":
+		result = evalFileMatcher(m, ev)
 	case "network":
 		result = evalNetworkMatcher(m, ev)
 	case "risk-flag":
@@ -152,6 +154,26 @@ func evalFilepathMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent) bool {
 	return hasCheck // false if no checks configured
 }
 
+// evalFileMatcher checks file syscall metadata (flags, sizes).
+//
+// Supported Field values:
+//
+//	is_write_open – O_WRONLY, O_RDWR, or O_CREAT set on open flags (file_open / file_rw)
+func evalFileMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent) bool {
+	switch strings.ToLower(m.Field) {
+	case "is_write_open", "write_open":
+		if ev.EventType != "file_open" && ev.EventType != "file_rw" {
+			return false
+		}
+		w := constants.IsWriteOpen(ev.FileFlags)
+		if b, ok := m.Equals.(bool); ok {
+			return w == b
+		}
+		return w
+	}
+	return false
+}
+
 // ── network ───────────────────────────────────────────────────────────────
 
 // evalNetworkMatcher inspects ev.Network fields.
@@ -223,6 +245,7 @@ func evalRiskFlagMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent) bool {
 //	has_tag                     – tag exists in session (contains: or values:)
 //	has_exec_comm               – any exec in session has comm in values list
 //	exec_binary_match_filepath  – any exec binary == current ev.FilePath (equals: true)
+//	exec_binary_match_filepath_same_pid – same PID exec binary == ev.FilePath (equals: true)
 //	other_file_rw               – session has file_rw with different path (equals: true)
 func evalSessionMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent, sess *correlator.Session) bool {
 	if sess == nil {
@@ -286,6 +309,22 @@ func evalSessionMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent, sess *corre
 		found := false
 		for _, sev := range sess.Events {
 			if sev.EventType == "exec" && sev.Binary == ev.FilePath {
+				found = true
+				break
+			}
+		}
+		if b, ok := m.Equals.(bool); ok {
+			return found == b
+		}
+		return found
+
+	case "exec_binary_match_filepath_same_pid":
+		if ev.FilePath == "" {
+			return false
+		}
+		found := false
+		for _, sev := range sess.Events {
+			if sev.EventType == "exec" && sev.Pid == ev.Pid && sev.Binary == ev.FilePath {
 				found = true
 				break
 			}

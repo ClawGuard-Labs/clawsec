@@ -67,6 +67,7 @@ type Info struct {
 //
 //	event-type   – ev.EventType
 //	process      – ev.Comm / ev.Binary / ev.Cmdline / ev.IsAIProcess
+//	file         – ev.FileFlags (e.g. write-capable open)
 //	filepath     – ev.FilePath
 //	network      – ev.Network (DstPort, DstIP, HTTPMethod, Protocol)
 //	risk-flag    – ev.RiskFlags bitmask
