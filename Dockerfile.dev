@@ -12,7 +12,7 @@
 #   docker run --rm -v "$PWD:/src" -w /src akmon-dev make bpf
 #   docker run --rm -v "$PWD:/src" -w /src akmon-dev bash -c 'cd ui && npm ci && npm run build'
 
-FROM golang:1.24-bookworm
+FROM golang:1.26-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
