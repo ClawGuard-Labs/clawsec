@@ -11,11 +11,12 @@
 // semantic meaning.
 //
 // Size audit (must match C):
-//   MonHdr        = 8+4+4+4+4+8+1+7+16         = 56 bytes
-//   BPFExecEvent  = 56+256+(16×128)+4+4          = 2368 bytes
-//   BPFFileEvent  = 56+256+4+4+8+4+4             = 336 bytes
-//   BPFNetEvent   = 56+4+2+1+1+256+4+4           = 328 bytes
-//   BPFTLSEvent   = 56+1024+4+4                  = 1088 bytes
+//
+//	MonHdr        = 8+4+4+4+4+8+1+7+16         = 56 bytes
+//	BPFExecEvent  = 56+256+(16×128)+4+4          = 2368 bytes
+//	BPFFileEvent  = 56+256+4+4+8+4+4             = 336 bytes
+//	BPFNetEvent   = 56+4+2+1+1+256+4+4           = 328 bytes
+//	BPFTLSEvent   = 56+1024+4+4                  = 1088 bytes
 package consumer
 
 import (
@@ -27,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
 )
 

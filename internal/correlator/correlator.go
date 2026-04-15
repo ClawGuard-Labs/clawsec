@@ -3,26 +3,26 @@
 // correlator.go — AI activity session management engine.
 //
 // The Correlator receives decoded events from the consumer and:
-//   1. Assigns each event to an AI activity Session
-//   2. Maintains the PID ancestry tree for session inheritance
-//   3. Enriches the event with session ID, parent comm, and process tree
-//   4. Periodically GCs expired sessions
+//  1. Assigns each event to an AI activity Session
+//  2. Maintains the PID ancestry tree for session inheritance
+//  3. Enriches the event with session ID, parent comm, and process tree
+//  4. Periodically GCs expired sessions
 //
 // Session Assignment Algorithm:
 //
-//   For each incoming event with (pid, ppid):
-//     a) If pid is already in pidToSession → use that session
-//     b) Walk pidToParent: pid → ppid → ppid.ppid → ...
-//        until we hit a known session or reach a root (ppid == 0/1)
-//     c) Check ppid directly from the event (covers first-time exec events)
-//     d) If no ancestor found → create a new session with pid as root
+//	For each incoming event with (pid, ppid):
+//	  a) If pid is already in pidToSession → use that session
+//	  b) Walk pidToParent: pid → ppid → ppid.ppid → ...
+//	     until we hit a known session or reach a root (ppid == 0/1)
+//	  c) Check ppid directly from the event (covers first-time exec events)
+//	  d) If no ancestor found → create a new session with pid as root
 //
 // Process Tree Enrichment:
 //
-//   pidToComm tracks the most recent comm seen per PID (populated from
-//   exec events). buildProcessTree() walks pidToParent to reconstruct
-//   the ancestry chain from the session root down to the event's parent.
-//   The chain is attached to ev.ProcessTree as []ProcessAncestor.
+//	pidToComm tracks the most recent comm seen per PID (populated from
+//	exec events). buildProcessTree() walks pidToParent to reconstruct
+//	the ancestry chain from the session root down to the event's parent.
+//	The chain is attached to ev.ProcessTree as []ProcessAncestor.
 //
 // Thread safety: all public methods are safe for concurrent use.
 package correlator

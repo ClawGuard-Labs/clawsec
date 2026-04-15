@@ -87,12 +87,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             clang llvm libbpf-dev linux-libc-dev linux-tools-generic
           # bpftool is a virtual package on 22.04; resolve the concrete binary
-          # shipped by linux-tools-generic and expose it on PATH.
-          BPFTOOL_BIN=$(find /usr/lib/linux-tools -maxdepth 2 -name bpftool -type f | sort | tail -1)
+          # shipped by linux-tools-<ver>-generic and expose it on PATH.
+          BPFTOOL_BIN=$(find /usr/lib /usr/sbin -maxdepth 4 -name bpftool -type f -executable 2>/dev/null | sort | tail -1)
           if [ -z "$BPFTOOL_BIN" ]; then
-            echo "bpftool binary not found under /usr/lib/linux-tools" >&2
+            echo "bpftool binary not found; searched /usr/lib and /usr/sbin" >&2
+            ls -la /usr/lib/ | grep -i linux-tools || true
             exit 1
           fi
+          echo "Using bpftool: $BPFTOOL_BIN"
           sudo ln -sf "$BPFTOOL_BIN" /usr/local/bin/bpftool
           bpftool version
 

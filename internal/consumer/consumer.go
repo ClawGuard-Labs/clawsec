@@ -13,10 +13,11 @@
 //   - Available since kernel 5.8 — well within our 5.15 minimum
 //
 // Drop tracking:
-//   When the ring buffer fills faster than userspace drains it, the
-//   kernel drops events and sets a "lost" counter. We log a warning
-//   when this happens. The solution at that point is to increase the
-//   ringbuf max_entries in the BPF Makefile, or reduce eBPF event rate.
+//
+//	When the ring buffer fills faster than userspace drains it, the
+//	kernel drops events and sets a "lost" counter. We log a warning
+//	when this happens. The solution at that point is to increase the
+//	ringbuf max_entries in the BPF Makefile, or reduce eBPF event rate.
 package consumer
 
 import (
@@ -24,10 +25,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/ringbuf"
 	"go.uber.org/zap"
-	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
 )
 
 // Consumer polls the eBPF ring buffer and dispatches decoded events.
@@ -37,8 +38,8 @@ type Consumer struct {
 	cfg    *aiprofile.Profile
 
 	// Stats
-	decoded  uint64
-	dropped  uint64
+	decoded   uint64
+	dropped   uint64
 	decodeErr uint64
 }
 

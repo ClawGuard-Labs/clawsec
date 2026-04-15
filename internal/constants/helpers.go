@@ -6,7 +6,6 @@ package constants
 
 import "strings"
 
-
 func IsLocalhost(ip string) bool {
 	return ip == "127.0.0.1" || ip == "::1" || strings.HasPrefix(ip, "127.")
 }

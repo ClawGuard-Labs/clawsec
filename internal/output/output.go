@@ -12,31 +12,32 @@
 //     idleTimeout (default 500 ms), all buffered events are flushed as
 //     a single JSON block:
 //
-//       {
-//         "session_id":   "sess_376ecc2c",
-//         "parent_pid":   65712,
-//         "parent_comm":  "bash",
-//         "first_seen":   "...",
-//         "last_seen":    "...",
-//         "duration_ms":  4,
-//         "peak_risk":    30,
-//         "tags":         ["sensitive_read"],
-//         "event_count":  8,
-//         "events": [
-//           { ...exec bpftool... },
-//           { ...file_open...   },
-//           { ...exec grep...   },
-//           ...
-//         ]
-//       }
+//     {
+//     "session_id":   "sess_376ecc2c",
+//     "parent_pid":   65712,
+//     "parent_comm":  "bash",
+//     "first_seen":   "...",
+//     "last_seen":    "...",
+//     "duration_ms":  4,
+//     "peak_risk":    30,
+//     "tags":         ["sensitive_read"],
+//     "event_count":  8,
+//     "events": [
+//     { ...exec bpftool... },
+//     { ...file_open...   },
+//     { ...exec grep...   },
+//     ...
+//     ]
+//     }
 //
 //     This makes the full chain of events for a shell pipeline / AI agent
 //     action visible in one block rather than scattered across many lines.
 //
 // SSE:
-//     Both modes fan-out to SSE subscribers at GET /events.
-//     Flat mode sends one SSE event per event.
-//     Grouped mode sends one SSE event per flushed session group.
+//
+//	Both modes fan-out to SSE subscribers at GET /events.
+//	Flat mode sends one SSE event per event.
+//	Grouped mode sends one SSE event per flushed session group.
 package output
 
 import (
@@ -180,15 +181,15 @@ type GroupedWriter struct {
 
 // sessionGroup accumulates events for one AI session.
 type sessionGroup struct {
-	SessionID  string `json:"session_id"`
-	ParentPID  uint32 `json:"parent_pid,omitempty"`
-	ParentComm string `json:"parent_comm,omitempty"`
-	FirstSeen  time.Time `json:"first_seen"`
-	LastSeen   time.Time `json:"last_seen"`
-	DurationMs int64  `json:"duration_ms"`
-	PeakRisk   int    `json:"peak_risk_score"`
-	Tags       []string `json:"tags"`
-	EventCount int    `json:"event_count"`
+	SessionID  string                    `json:"session_id"`
+	ParentPID  uint32                    `json:"parent_pid,omitempty"`
+	ParentComm string                    `json:"parent_comm,omitempty"`
+	FirstSeen  time.Time                 `json:"first_seen"`
+	LastSeen   time.Time                 `json:"last_seen"`
+	DurationMs int64                     `json:"duration_ms"`
+	PeakRisk   int                       `json:"peak_risk_score"`
+	Tags       []string                  `json:"tags"`
+	EventCount int                       `json:"event_count"`
 	Events     []*consumer.EnrichedEvent `json:"events"`
 
 	tagSet map[string]struct{} // dedup helper, not serialised

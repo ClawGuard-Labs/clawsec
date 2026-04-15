@@ -73,5 +73,7 @@ func (w *Writer) writeLog() {
 		return
 	}
 
-	os.Rename(tmpName, w.path)
+	if err := os.Rename(tmpName, w.path); err != nil {
+		os.Remove(tmpName)
+	}
 }

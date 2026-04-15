@@ -13,13 +13,13 @@ import (
 )
 
 type AIServiceInfo struct {
-	Type     string `json:"type"`               // "process" or "service"
-	Name     string `json:"name"`               // process comm or service name
-	Category string `json:"category"`           // "llm", "agent", "training", "vector-db", "inference", "ui"
-	PID      uint32 `json:"pid,omitempty"`       // for processes
-	Port     uint16 `json:"port,omitempty"`      // for services
-	Status   string `json:"status"`             // "running", "listening"
-	Cmdline  string `json:"cmdline,omitempty"`   // full command line (truncated)
+	Type     string `json:"type"`              // "process" or "service"
+	Name     string `json:"name"`              // process comm or service name
+	Category string `json:"category"`          // "llm", "agent", "training", "vector-db", "inference", "ui"
+	PID      uint32 `json:"pid,omitempty"`     // for processes
+	Port     uint16 `json:"port,omitempty"`    // for services
+	Status   string `json:"status"`            // "running", "listening"
+	Cmdline  string `json:"cmdline,omitempty"` // full command line (truncated)
 }
 
 func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {

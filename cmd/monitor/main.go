@@ -4,39 +4,41 @@
 //
 // Architecture:
 //
-//   ┌─────────────────────────────────────────────────────────────────┐
-//   │  Kernel (eBPF programs attached to stable syscall tracepoints)  │
-//   │  execve │ openat │ read │ write │ unlinkat │ mmap │ connect …   │
-//   └──────────────────────┬──────────────────────────────────────────┘
-//                          │ ring buffer (8 MB)
-//   ┌──────────────────────▼──────────────────────────────────────────┐
-//   │  consumer  → decode raw bytes → EnrichedEvent                  │
-//   │  correlator → assign session ID, parent comm, process tree      │
-//   │  detector  → evaluate rules → tags + risk score                 │
-//   │  output    → NDJSON to stdout/file + SSE HTTP stream            │
-//   └─────────────────────────────────────────────────────────────────┘
+//	┌─────────────────────────────────────────────────────────────────┐
+//	│  Kernel (eBPF programs attached to stable syscall tracepoints)  │
+//	│  execve │ openat │ read │ write │ unlinkat │ mmap │ connect …   │
+//	└──────────────────────┬──────────────────────────────────────────┘
+//	                       │ ring buffer (8 MB)
+//	┌──────────────────────▼──────────────────────────────────────────┐
+//	│  consumer  → decode raw bytes → EnrichedEvent                  │
+//	│  correlator → assign session ID, parent comm, process tree      │
+//	│  detector  → evaluate rules → tags + risk score                 │
+//	│  output    → NDJSON to stdout/file + SSE HTTP stream            │
+//	└─────────────────────────────────────────────────────────────────┘
 //
-//   TLS capture (optional, requires libssl.so in running processes):
-//   ┌─────────────────────────────────────────────────────────────────┐
-//   │  uprobe SSL_write   → plaintext before encryption               │
-//   │  uretprobe SSL_read → plaintext after decryption                │
-//   │  → same ring buffer → same pipeline                             │
-//   └─────────────────────────────────────────────────────────────────┘
+//	TLS capture (optional, requires libssl.so in running processes):
+//	┌─────────────────────────────────────────────────────────────────┐
+//	│  uprobe SSL_write   → plaintext before encryption               │
+//	│  uretprobe SSL_read → plaintext after decryption                │
+//	│  → same ring buffer → same pipeline                             │
+//	└─────────────────────────────────────────────────────────────────┘
 //
 // Usage:
-//   sudo ./bin/akmon [flags]
+//
+//	sudo ./bin/akmon [flags]
 //
 // Flags:
-//   --bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
-//   --behavioral-templates  path to behavioral YAML dir (default: ./akmon-templates/behavioral-templates)
-//   --output      JSON output file        (default: stdout)
-//   --sse         SSE listen address      (default: disabled)
-//   --ui          graph dashboard address (default: disabled)
-//   --cors-origin allowed browser Origin for --ui and --sse (repeatable)
-//   --log-level   debug|info|warn|error   (default: info)
-//   --config      path to config.yaml (default: ./config.yaml or beside binary)
-//   --no-tls      disable TLS uprobe capture (default: enabled if libssl found)
-//   --version     print version and exit
+//
+//	--bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
+//	--behavioral-templates  path to behavioral YAML dir (default: ./akmon-templates/behavioral-templates)
+//	--output      JSON output file        (default: stdout)
+//	--sse         SSE listen address      (default: disabled)
+//	--ui          graph dashboard address (default: disabled)
+//	--cors-origin allowed browser Origin for --ui and --sse (repeatable)
+//	--log-level   debug|info|warn|error   (default: info)
+//	--config      path to config.yaml (default: ./config.yaml or beside binary)
+//	--no-tls      disable TLS uprobe capture (default: enabled if libssl found)
+//	--version     print version and exit
 package main
 
 import (
@@ -557,7 +559,7 @@ func buildLogger(level string) *zap.Logger {
 		TimeKey:        "T",
 		LevelKey:       "L",
 		NameKey:        "N",
-		CallerKey:      "",  // omit caller — reduces noise in production
+		CallerKey:      "", // omit caller — reduces noise in production
 		MessageKey:     "M",
 		StacktraceKey:  "S",
 		LineEnding:     zapcore.DefaultLineEnding,

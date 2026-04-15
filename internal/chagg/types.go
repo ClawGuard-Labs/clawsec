@@ -30,16 +30,16 @@ type Occurrence struct {
 
 // Chain is one unique edge-pattern with all its occurrences.
 type Chain struct {
-	SessionID       string        `json:"session_id"`
-	Initiator       string        `json:"initiator"`
-	Process         string        `json:"process"`
-	CommandLine     string        `json:"command_line"`
-	ChainPattern    string        `json:"chain_pattern"`
-	EdgeDetails     []EdgeDetail  `json:"edge_details"`
-	OccurrenceCount int           `json:"occurrence_count"`
-	FirstSeen       time.Time     `json:"first_seen"`
-	LastSeen        time.Time     `json:"last_seen"`
-	Occurrences     []Occurrence  `json:"occurrences"`
+	SessionID       string       `json:"session_id"`
+	Initiator       string       `json:"initiator"`
+	Process         string       `json:"process"`
+	CommandLine     string       `json:"command_line"`
+	ChainPattern    string       `json:"chain_pattern"`
+	EdgeDetails     []EdgeDetail `json:"edge_details"`
+	OccurrenceCount int          `json:"occurrence_count"`
+	FirstSeen       time.Time    `json:"first_seen"`
+	LastSeen        time.Time    `json:"last_seen"`
+	Occurrences     []Occurrence `json:"occurrences"`
 }
 
 // pendingChain tracks in-progress edge accumulation for a single process.

@@ -12,18 +12,20 @@
 // The caller is responsible for calling Objects.Close() on shutdown.
 //
 // Tracepoint attach model:
-//   link.Tracepoint(group, event, program, nil)
-//   group = "syscalls" for all sys_enter_*/sys_exit_* hooks
-//   group = "sched"    for sched_process_exit
+//
+//	link.Tracepoint(group, event, program, nil)
+//	group = "syscalls" for all sys_enter_*/sys_exit_* hooks
+//	group = "sched"    for sched_process_exit
 //
 // All hooks use stable syscall tracepoints — no kprobes, no kernel-version
 // specific function names. The same binary attaches cleanly on 5.15 and 6.x.
 //
 // SSL uprobe attach model (AttachSSLProbes):
-//   Scans /proc/*/maps for libssl.so library paths, then for each unique
-//   path calls link.OpenExecutable(path).Uprobe("SSL_write", ...) and
-//   .Uretprobe("SSL_read", ...) to hook plaintext TLS traffic.
-//   This is non-fatal: if no libssl.so is found, TLS capture is disabled.
+//
+//	Scans /proc/*/maps for libssl.so library paths, then for each unique
+//	path calls link.OpenExecutable(path).Uprobe("SSL_write", ...) and
+//	.Uretprobe("SSL_read", ...) to hook plaintext TLS traffic.
+//	This is non-fatal: if no libssl.so is found, TLS capture is disabled.
 package loader
 
 import (

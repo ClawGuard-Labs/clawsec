@@ -70,11 +70,11 @@ type Node struct {
 
 // Edge is a directed arc in the provenance graph.
 type Edge struct {
-	ID      string   `json:"id"`
-	Src     string   `json:"src"`
-	Dst     string   `json:"dst"`
-	Type    EdgeType `json:"type"`
-	Tainted bool     `json:"tainted"`
+	ID      string    `json:"id"`
+	Src     string    `json:"src"`
+	Dst     string    `json:"dst"`
+	Type    EdgeType  `json:"type"`
+	Tainted bool      `json:"tainted"`
 	At      time.Time `json:"at"`
 }
 

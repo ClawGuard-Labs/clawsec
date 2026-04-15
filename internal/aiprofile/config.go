@@ -31,7 +31,7 @@ type fileRoot struct {
 
 type processEntryYAML struct {
 	Name     string `yaml:"name"`
-	Category string `yaml:"category,omitempty"` 
+	Category string `yaml:"category,omitempty"`
 }
 
 type serviceEntryYAML struct {

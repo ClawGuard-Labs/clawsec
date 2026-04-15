@@ -105,7 +105,7 @@ func New(ctx context.Context, templatesDir string, writer outpkg.EventWriter, lo
 		cfg:          cfg,
 	}
 
-	engine, err := nuclei.NewThreadSafeNucleiEngine()
+	engine, err := nuclei.NewThreadSafeNucleiEngineCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("nuclei engine init: %w", err)
 	}

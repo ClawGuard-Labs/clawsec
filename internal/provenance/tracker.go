@@ -55,10 +55,6 @@ const (
 	// downloadCorrelationWindow: if a file_open write follows a net_connect
 	// within this window from the same PID, the file is considered downloaded.
 	downloadCorrelationWindow = 60 * time.Second
-
-	// taintExpiryDuration: tainted PID records are removed after this duration
-	// to prevent unbounded memory growth.
-	taintExpiryDuration = 2 * time.Hour
 )
 
 // TaintInfo is the result of processing a single event through the tracker.

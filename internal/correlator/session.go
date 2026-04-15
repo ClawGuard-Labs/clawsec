@@ -7,11 +7,11 @@
 // behaviour tags.
 //
 // Session lifecycle:
-//   1. Created when an event arrives with an unknown PID that has no
-//      known ancestor in our PID→session map.
-//   2. Extended whenever a new PID whose parent is in this session executes.
-//   3. Marked idle after sessionIdleTimeout of inactivity.
-//   4. Expired and GC'd after sessionExpireTimeout.
+//  1. Created when an event arrives with an unknown PID that has no
+//     known ancestor in our PID→session map.
+//  2. Extended whenever a new PID whose parent is in this session executes.
+//  3. Marked idle after sessionIdleTimeout of inactivity.
+//  4. Expired and GC'd after sessionExpireTimeout.
 package correlator
 
 import (
