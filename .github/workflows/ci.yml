@@ -72,7 +72,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.61.0
+          version: v1.64.8
           args: --timeout=5m
 
   bpf-build:
@@ -85,9 +85,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang llvm libbpf-dev linux-libc-dev linux-tools-common \
-            "linux-tools-$(uname -r)" bpftool || \
-          sudo apt-get install -y --no-install-recommends clang llvm libbpf-dev linux-libc-dev bpftool
+            clang llvm libbpf-dev linux-libc-dev linux-tools-generic
+          # bpftool is a virtual package on 22.04; resolve the concrete binary
+          # shipped by linux-tools-generic and expose it on PATH.
+          BPFTOOL_BIN=$(find /usr/lib/linux-tools -maxdepth 2 -name bpftool -type f | sort | tail -1)
+          if [ -z "$BPFTOOL_BIN" ]; then
+            echo "bpftool binary not found under /usr/lib/linux-tools" >&2
+            exit 1
+          fi
+          sudo ln -sf "$BPFTOOL_BIN" /usr/local/bin/bpftool
+          bpftool version
 
       - name: Generate vmlinux.h (best effort)
         run: |

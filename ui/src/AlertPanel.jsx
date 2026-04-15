@@ -55,12 +55,13 @@ export const AlertPanel = React.memo(function AlertPanel({ alerts, selectedAlert
   }
 
   const filtered = useMemo(() => {
-    const now    = Date.now()
     const maxAge = { '1h': 3_600_000, '3h': 10_800_000, '12h': 43_200_000, 'all': Infinity }[timeRange]
+    // eslint-disable-next-line react-hooks/purity -- time boundary for filter; recomputed whenever any dep changes.
+    const cutoff = maxAge === Infinity ? -Infinity : Date.now() - maxAge
     return sortedAlerts(alerts).filter(a => {
       if (!activeSevs.has((a.severity ?? 'info').toLowerCase())) return false
       if ((a.risk_score ?? 0) < minScore) return false
-      if (maxAge !== Infinity && (now - new Date(a.at).getTime()) > maxAge) return false
+      if (cutoff !== -Infinity && new Date(a.at).getTime() < cutoff) return false
       return true
     })
   }, [alerts, activeSevs, minScore, timeRange])

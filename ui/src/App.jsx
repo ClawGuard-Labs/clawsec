@@ -3,7 +3,8 @@ import './App.css'
 import { useGraphSSE }   from './useGraphSSE'
 import { AlertPanel }    from './AlertPanel'
 import { AIServicesBar }  from './AIServicesBar'
-import { SessionGrid, buildSessions } from './SessionGrid'
+import { SessionGrid } from './SessionGrid'
+import { buildSessions } from './sessions'
 import { Inspector }     from './Inspector'
 
 const GraphView = lazy(() => import('./GraphView').then(m => ({ default: m.GraphView })))

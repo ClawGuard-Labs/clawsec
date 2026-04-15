@@ -27,7 +27,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang llvm libbpf-dev linux-libc-dev bpftool
+            clang llvm libbpf-dev linux-libc-dev linux-tools-generic
+          BPFTOOL_BIN=$(find /usr/lib/linux-tools -maxdepth 2 -name bpftool -type f | sort | tail -1)
+          if [ -z "$BPFTOOL_BIN" ]; then
+            echo "bpftool binary not found under /usr/lib/linux-tools" >&2
+            exit 1
+          fi
+          sudo ln -sf "$BPFTOOL_BIN" /usr/local/bin/bpftool
+          bpftool version
 
       - name: Generate vmlinux.h
         run: bash scripts/gen_vmlinux.sh
