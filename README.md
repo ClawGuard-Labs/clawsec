@@ -25,6 +25,24 @@ Two complementary detection engines:
 - **Detection templates** — shipped in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** (`behavioral-templates/`, `nuclei-templates/`)
 - **React dashboard** (optional) — graph view and alert panel served by the monitor
 
+### Index
+
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [Build Targets](#build-targets)
+- [Flags](#flags)
+- [Configuration (`config.yaml`)](#configuration-configyaml)
+- [Output Format](#output-format)
+- [Testing](#testing)
+- [Detection Templates](#detection-templates)
+- [Running as a Background Service (systemd)](#running-as-a-background-service-systemd)
+- [SSE Live Stream](#sse-live-stream)
+- [Project Structure](#project-structure)
+- [Dependencies](#dependencies)
+- [FAQ](#faq)
+
 ---
 
 ## Architecture
@@ -55,7 +73,7 @@ Two complementary detection engines:
 |---|---|---|
 | **Type** | Passive | Active |
 | **Input** | eBPF kernel events | HTTP requests to local services |
-| **Runs on** | Every event | Only `net_connect` to localhost AI ports |
+| **Runs on** | Every event | Only `net_connect` to localhost AI ports (from `config.yaml` -> `ai.services`) |
 | **Detects** | Process behavior, file access patterns, cross-event chains | Service misconfigs, unauth access, exposed APIs |
 | **Output** | Tagged `EnrichedEvent` with risk score | `nuclei_finding` event with matched template |
 | **Latency** | Real-time (microseconds) | Async scan (seconds) |
@@ -75,19 +93,11 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 
 ## Install
 
-### From a release (recommended)
+YAML detection rules are **not** in this repository. You will usually want the separate templates bundle: **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)**.
 
-```bash
-# replace <version> with the tag you want, e.g. v0.1.0
-curl -LO "https://github.com/ClawGuard-Labs/akmon/releases/download/<version>/akmon_linux_amd64.tar.gz"
-tar -xzf akmon_linux_amd64.tar.gz
-sudo install -m 0755 akmon /usr/local/bin/akmon
-sudo install -m 0644 monitor.bpf.o /usr/lib/akmon/monitor.bpf.o
-```
+### Local development (no system install)
 
-### From source
-
-YAML detection rules are **not** in this repository. Clone **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** next to `akmon` (or anywhere you prefer).
+Clone both repos, build, and run from your workspace:
 
 ```bash
 git clone https://github.com/ClawGuard-Labs/akmon
@@ -95,6 +105,19 @@ git clone https://github.com/ClawGuard-Labs/akmon-templates
 cd akmon
 make build
 ```
+
+Then follow [Quick Start](#quick-start) and [Templates setup](#templates-setup-akmon-templates) to point Akmon at your templates.
+
+### System install (systemd)
+
+If you want Akmon to run as a background service and use `/etc/akmon/...` paths, use:
+
+```bash
+sudo make install
+sudo make enable
+```
+
+See [Running as a Background Service (systemd)](#running-as-a-background-service-systemd) for details.
 
 ### Build on macOS (via Docker)
 
@@ -111,20 +134,43 @@ Loading eBPF programs into the kernel requires a Linux host; use a VM, a cloud L
 
 ## Quick Start
 
-**Option A — defaults** — from the `akmon` repo directory, defaults expect **`./akmon-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `akmon` (nested), or symlink:
+### Templates setup (akmon-templates)
+
+Akmon needs two template directories:
+
+- **Behavioral**: `behavioral-templates/` (from `akmon-templates`)
+- **Nuclei**: `nuclei-templates/` (from `akmon-templates`)
+
+Choose one of these common layouts.
+
+#### Option A — templates nested inside `akmon` (defaults)
+
+From the `akmon` repo directory, defaults expect:
+
+- `./akmon-templates/behavioral-templates`
+- `./nuclei-templates` (you can symlink it to the bundle)
 
 ```bash
 git clone https://github.com/ClawGuard-Labs/akmon-templates.git akmon-templates
 ln -sfn akmon-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
-sudo ./bin/akmon
 ```
 
-If **akmon-templates** sits **next to** `akmon` (sibling), pass paths explicitly:
+#### Option B — templates as a sibling repo (pass flags)
+
+If `akmon-templates` sits next to `akmon`:
 
 ```bash
 sudo ./bin/akmon \
   --behavioral-templates ../akmon-templates/behavioral-templates \
   --nuclei-templates ../akmon-templates/nuclei-templates
+```
+
+### Run
+
+If you used **Option A** (defaults), you can run:
+
+```bash
+sudo ./bin/akmon
 ```
 
 **More flags:**
@@ -137,7 +183,7 @@ sudo ./bin/akmon \
   --group-timeout   500ms
 ```
 
-See [Template bundles (akmon-templates)](#template-bundles-akmon-templates) for installs, authoring, and tests.
+See [Detection Templates](#detection-templates) for authoring and rule bundles.
 
 ---
 
@@ -146,7 +192,9 @@ See [Template bundles (akmon-templates)](#template-bundles-akmon-templates) for 
 ```bash
 make build          # Compile Go binary + embed eBPF object → bin/akmon
 make bpf            # Recompile eBPF C → bpf/monitor.bpf.o  (needs clang)
+make deps           # check all build/runtime dependencies
 make gen-vmlinux    # Regenerate vmlinux.h from kernel BTF   (once per kernel)
+make ui             # build the React dashboard (requires Node.js ≥ 18)
 make run            # Build and run as root
 make install        # Install to /usr/local/bin/akmon
 make clean          # Remove bin/
@@ -168,36 +216,20 @@ make lint           # Run golangci-lint
 | `--grouped` | false | Buffer events by session and flush as one JSON block per session |
 | `--group-timeout <dur>` | `500ms` | Idle time before a session group is flushed (only with `--grouped`) |
 | `--log-level <level>` | `info` | Log verbosity: `debug` \| `info` \| `warn` \| `error` |
+| `--config <path>` | auto-detect | Path to `config.yaml` (AI services/ports, model extensions, AI process names). If unset, Akmon searches `./config.yaml`, then `/etc/akmon/config.yaml`, then next to the binary. |
 | `--no-tls` | false | Disable TLS uprobe capture (uprobes on `libssl.so`) |
 | `--cors-origin <url>` | `http://localhost:9090`, `http://127.0.0.1:9090` | Allowed origins for the dashboard API (repeatable). Defaults cover the local dashboard only. |
 | `--version` | — | Print version and exit |
 
 ---
 
-## Detection Templates
+## Configuration (`config.yaml`)
 
-Rules are maintained in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/akmon-templates/blob/main/AUTHORING.md).
+Akmon ships with a `config.yaml` that defines the **AI profile** used at runtime:
 
-YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
-
-#### How Nuclei scanning is triggered
-
-```
-eBPF event: net_connect
-  DstIP  = 127.0.0.1
-  DstPort = 6333           ← known AI service port (Qdrant)
-      │
-      ├─→ Behavioral detector runs (all YAML rules)
-      │
-      └─→ Nuclei scanner (async goroutine):
-              http://127.0.0.1:6333  ← scan target
-              ↓
-              nuclei-templates/ai-services/*.yaml
-              ↓
-              finding: qdrant-unauth-access (severity: high)
-              ↓
-              emitted as nuclei_finding event → JSON output
-```
+- **`ai.services`**: localhost ports Akmon treats as AI services (used for service labeling and for triggering the Nuclei scanner on observed connections).
+- **`ai.processes`**: process names that should be considered AI runtimes/agents (powers the `is_ai_process` flag used by behavioral rules).
+- **`ai.model_extensions`**: model file extensions used by file-access rules (e.g. `.gguf`, `.safetensors`, `.onnx`).
 
 **Scanned AI service ports:**
 
@@ -311,56 +343,21 @@ cat nuclei_test.json | jq 'select(.event_type == "nuclei_finding")'
 ### Verify templates load
 
 ```bash
-# Check behavioral templates load (seen in startup logs)
-sudo ./bin/akmon --log-level info 2>&1 | grep "templates loaded"
-# Expected: INFO  detection templates loaded  {"count": N, "dir": "./akmon-templates/behavioral-templates"}
-
-# Check Nuclei engine starts
-sudo ./bin/akmon --log-level info 2>&1 | grep "nuclei"
-# Expected: INFO  nuclei engine ready  {"templates_dir": "./nuclei-templates"}
-#           INFO  nuclei active scanner enabled
-```
-
-### Full test command
-
-```bash
-sudo ./bin/akmon \
-  --behavioral-templates ./akmon-templates/behavioral-templates \
-  --nuclei-templates ./nuclei-templates \
-  --output           events.json \
-  --log-level        debug \
-  --grouped \
-  --group-timeout    500ms
+# The startup logs print which template directories were loaded.
+# If you’re unsure which paths Akmon is using, see:
+#   Templates setup: https://github.com/ClawGuard-Labs/akmon#templates-setup-akmon-templates
+sudo ./bin/akmon --log-level info 2>&1 | grep -E "templates loaded|nuclei engine ready|active scanner enabled"
 ```
 
 ---
 
-## Template bundles (akmon-templates)
+## Detection templates
 
-| Repository | Role |
-|------------|------|
-| **[akmon](https://github.com/ClawGuard-Labs/akmon)** (this repo) | eBPF monitor, Go engine, UI |
-| **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
+Rules are maintained in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)**. YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
 
-**Local development**
-
-- Clone or symlink so **`./akmon-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
-
-**`make install`**
-
-- Install copies YAML from **`TEMPLATES_SRC`** (default: `../akmon-templates` relative to the `akmon` tree):
-
-  ```bash
-  sudo make install
-  # or:
-  sudo make install TEMPLATES_SRC=/opt/src/akmon-templates
-  ```
-
-- Behavioral rules go to **`/etc/akmon/behavioral-templates/`**; Nuclei rules to **`/etc/akmon/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
-
-**Tests**
-
-- `go test ./...` from `tests/` loads behavioral YAML from **`../../akmon-templates/behavioral-templates`** (sibling of the `akmon` repo). Adjust `tests/helpers_test.go` if your layout differs.
+- **Local dev paths**: see [Templates setup](#templates-setup-akmon-templates).
+- **System install paths**: `make install` copies templates under `/etc/akmon/` (see [Running as a Background Service (systemd)](#running-as-a-background-service-systemd)).
+- **Tests**: `go test ./...` under `tests/` expects the templates repo as a sibling (`../akmon-templates`). Adjust `tests/helpers_test.go` if your layout differs.
 
 ---
 
@@ -384,6 +381,7 @@ sudo make install
 |------|----------|
 | `/usr/local/bin/akmon` | Binary |
 | `/usr/lib/akmon/monitor.bpf.o` | eBPF object |
+| `/etc/akmon/config.yaml` | AI profile used to classify AI processes/services and model file extensions |
 | `/etc/akmon/behavioral-templates/` | Behavioral detection rules (from `akmon-templates`) |
 | `/etc/akmon/nuclei-templates/` | Nuclei active scan templates (from `akmon-templates`) |
 | `/etc/systemd/system/akmon.service` | systemd unit |
