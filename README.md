@@ -119,6 +119,61 @@ sudo make enable
 
 See [Running as a Background Service (systemd)](#running-as-a-background-service-systemd) for details.
 
+### Run on Linux via Docker (runtime)
+
+This is an alternative to `make install`. Akmon still requires a Linux host kernel with BTF enabled; the container loads eBPF into the **host kernel**, so it must run with elevated privileges and host mounts.
+
+#### 1) Prepare templates + config
+
+From the `akmon` repo directory:
+
+```bash
+git clone https://github.com/ClawGuard-Labs/akmon-templates.git ../akmon-templates
+sudo mkdir -p /var/log/akmon
+```
+
+`docker-compose.yml` expects:
+
+- `./config.yaml` -> mounted to `/etc/akmon/config.yaml`
+- `../akmon-templates/behavioral-templates` -> mounted to `/etc/akmon/behavioral-templates`
+- `../akmon-templates/nuclei-templates` -> mounted to `/etc/akmon/nuclei-templates`
+- Host `/var/log/akmon` -> mounted to container `/var/log/akmon` (persistent logs/output)
+
+#### 2) Build + run
+
+Using Compose:
+
+```bash
+docker compose up --build
+```
+
+Or using `docker run` directly (equivalent shape):
+
+```bash
+docker build -t akmon:local -f Dockerfile.runtime .
+docker run --rm \
+  --privileged \
+  --pid=host \
+  --network=host \
+  -v /sys/kernel/btf:/sys/kernel/btf:ro \
+  -v /sys/kernel/tracing:/sys/kernel/tracing \
+  -v /sys/kernel/debug:/sys/kernel/debug \
+  -v /sys/fs/bpf:/sys/fs/bpf \
+  -v /var/log/akmon:/var/log/akmon \
+  -v "$PWD/config.yaml:/etc/akmon/config.yaml:ro" \
+  -v "$PWD/../akmon-templates/behavioral-templates:/etc/akmon/behavioral-templates:ro" \
+  -v "$PWD/../akmon-templates/nuclei-templates:/etc/akmon/nuclei-templates:ro" \
+  akmon:local
+```
+
+#### 3) Where logs and output go
+
+- **Container logs** (stderr/stdout): `docker logs akmon` (or `docker compose logs -f`).
+- **Event output files** (persistent on the host via the mounted directory):
+  - `/var/log/akmon/events_logs.json`
+  - `/var/log/akmon/events_rules.json`
+  - `/var/log/akmon/chains.json`
+
 ### Build on macOS (via Docker)
 
 The runtime target is Linux only, but contributors can build on macOS using the provided dev image:

@@ -1,0 +1,35 @@
+services:
+  akmon:
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime
+    container_name: akmon
+    privileged: true
+    pid: host
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      # Host kernel data needed for vmlinux.h generation and BPF load.
+      - /sys/kernel/btf:/sys/kernel/btf:ro
+      - /sys/fs/bpf:/sys/fs/bpf
+      # Tracepoint attachment requires tracefs (or debugfs).
+      # Mount host paths so the container can access them.
+      - /sys/kernel/tracing:/sys/kernel/tracing
+      - /sys/kernel/debug:/sys/kernel/debug
+
+      # Persist logs/event output on the host.
+      - /var/log/akmon:/var/log/akmon
+
+      # Provide config + templates from the host.
+      - ./config.yaml:/etc/akmon/config.yaml:ro
+      # Templates repo is expected as a sibling by default:
+      #   ../akmon-templates/{behavioral-templates,nuclei-templates}
+      # If you have it nested inside this repo, change these paths accordingly.
+      - ../akmon-templates/behavioral-templates:/etc/akmon/behavioral-templates:ro
+      - ../akmon-templates/nuclei-templates:/etc/akmon/nuclei-templates:ro
+
+    environment:
+      AKMON_UI_ADDR: ":9090"
+      AKMON_LOG_LEVEL: "info"
+      AKMON_OUTPUT: "/var/log/akmon/events.json"
+      AKMON_COMPACT_LOG: "/var/log/akmon/chains.json"

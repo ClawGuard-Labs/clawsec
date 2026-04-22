@@ -1,0 +1,64 @@
+# syntax=docker/dockerfile:1
+#
+# Runtime image for Akmon (Linux host).
+# This image is meant to RUN the monitor inside a container.
+#
+# Important:
+# - eBPF is loaded into the *host kernel*, so the container must run privileged
+#   and mount host kernel filesystems (see docker-compose.yml / README).
+# - The BPF object is compiled at container start against the running kernel BTF
+#   (vmlinux.h is generated from /sys/kernel/btf/vmlinux).
+#
+# Build:
+#   docker build -t akmon:local -f Dockerfile.runtime .
+
+FROM golang:1.26-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build + runtime deps:
+# - Go (from base image) builds akmon binary
+# - Node builds the embedded UI assets
+# - clang/llvm/bpftool/libbpf-dev compile the BPF object at container start
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        bash \
+        clang \
+        llvm \
+        libbpf-dev \
+        linux-libc-dev \
+        bpftool \
+        make \
+        git \
+        curl \
+        gnupg \
+        pkg-config \
+        zlib1g-dev \
+        libelf-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Copy the full repo; we compile UI and the Go binary at build time.
+COPY . .
+
+# Build embedded UI (writes to internal/graphapi/static/).
+RUN cd ui && npm ci && npm run build
+
+# Build the daemon binary (BPF object is built at runtime).
+RUN CGO_ENABLED=0 go build \
+      -ldflags="-s -w -X main.Version=docker" \
+      -o /usr/local/bin/akmon \
+      ./cmd/monitor/...
+
+# Runtime dirs that the entrypoint expects.
+RUN mkdir -p /etc/akmon /usr/lib/akmon /var/log/akmon /src/scripts/docker \
+    && chmod 0755 /etc/akmon /usr/lib/akmon /var/log/akmon
+
+COPY scripts/docker/entrypoint.sh /usr/local/bin/akmon-entrypoint
+RUN chmod +x /usr/local/bin/akmon-entrypoint
+
+ENTRYPOINT ["/usr/local/bin/akmon-entrypoint"]
