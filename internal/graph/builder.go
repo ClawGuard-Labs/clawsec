@@ -283,17 +283,17 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 			category = "nuclei:" + ev.NucleiResult.Name
 		}
 		if b.shouldEmitAlert(ev.Pid, category, now) {
-		a := b.newAlert(
-			ev.NucleiResult.Severity,
-			constants.SeverityScore(ev.NucleiResult.Severity),
-			fmt.Sprintf("[nuclei] %s", ev.NucleiResult.Name),
-			ev.NucleiResult.Description,
-			[]string{procID},
-			ev.AISessionID,
-			now,
-		)
-		b.g.storeAlert(a)
-		diff.Alerts = append(diff.Alerts, a)
+			a := b.newAlert(
+				ev.NucleiResult.Severity,
+				constants.SeverityScore(ev.NucleiResult.Severity),
+				fmt.Sprintf("[nuclei] %s", ev.NucleiResult.Name),
+				ev.NucleiResult.Description,
+				[]string{procID},
+				ev.AISessionID,
+				now,
+			)
+			b.g.storeAlert(a)
+			diff.Alerts = append(diff.Alerts, a)
 		}
 	}
 

@@ -76,4 +76,3 @@ func TestNoDuplicateAlertsSamePidSameCategory(t *testing.T) {
 		t.Fatalf("expected %d alerts after second category, got %d", want, got)
 	}
 }
-
